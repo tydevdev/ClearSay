@@ -11,3 +11,4 @@
 *.ogg
 
 *.DS_Store
+venv/
