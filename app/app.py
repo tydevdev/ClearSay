@@ -9,7 +9,9 @@ from model import run_model
 
 def start_transcription():
     """Call the speech-to-text model and display its result."""
-    result = run_model()
+    # Hardcoded audio path for testing until recording is implemented
+    audio_path = "audio_files/test.wav"
+    result = run_model(audio_path)
     text_box.configure(state="normal")
     text_box.delete("1.0", ctk.END)
     text_box.insert(ctk.END, result)
