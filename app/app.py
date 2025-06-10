@@ -107,6 +107,14 @@ def clear_transcript() -> None:
     refresh_transcripts_list()
 
 
+def new_transcription() -> None:
+    """Clear the transcript area without saving previous text."""
+    text_box.configure(state="normal")
+    text_box.delete("1.0", "end")
+    text_box.configure(state="disabled")
+    status_label.configure(text="")
+
+
 sidebar_visible = False
 
 
@@ -134,8 +142,9 @@ def refresh_transcripts_list() -> None:
             ctk.CTkButton(
                 transcripts_list,
                 text=name,
-                width=180,
+                width=190,
                 anchor="w",
+                fg_color="transparent",
                 command=lambda n=name: display_transcript(n),
             ).pack(fill="x", padx=5, pady=2)
     else:
@@ -162,14 +171,21 @@ app.geometry("1000x600")
 app.minsize(800, 600)
 
 # Sidebar for transcript list
-transcripts_sidebar = ctk.CTkScrollableFrame(app, width=200)
+transcripts_sidebar = ctk.CTkScrollableFrame(app, width=220)
+ctk.CTkLabel(transcripts_sidebar, text="Saved Transcripts").pack(pady=(10, 0))
 transcripts_list = ctk.CTkFrame(transcripts_sidebar)
-transcripts_list.pack(fill="both", expand=True)
+transcripts_list.pack(fill="both", expand=True, padx=5, pady=5)
 transcripts_sidebar.pack_forget()
 
 # Main content frame
 main_frame = ctk.CTkFrame(app)
 main_frame.pack(side="right", fill="both", expand=True)
+
+# Top controls
+top_frame = ctk.CTkFrame(main_frame)
+top_frame.pack(fill="x", pady=(10, 0))
+new_button = ctk.CTkButton(top_frame, text="New Transcription", command=new_transcription)
+new_button.pack(side="right", padx=5)
 
 # Transcribed text display
 text_box = ctk.CTkTextbox(main_frame, width=550, height=400, state="disabled")
