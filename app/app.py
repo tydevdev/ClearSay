@@ -76,6 +76,14 @@ def process_transcription(file_path: str) -> None:
     recording = False
 
 
+def copy_to_clipboard() -> None:
+    """Copy the current transcript to the system clipboard."""
+    text = text_box.get("1.0", "end").strip()
+    if text:
+        app.clipboard_clear()
+        app.clipboard_append(text)
+
+
 # Create main application window
 app = ctk.CTk()
 app.title("ClearSay")
@@ -88,6 +96,10 @@ text_box.pack(pady=20)
 # Recording control button
 start_button = ctk.CTkButton(app, text="Start Recording", command=toggle_recording)
 start_button.pack(pady=10)
+
+# Copy to clipboard button
+copy_button = ctk.CTkButton(app, text="Copy Transcript", command=copy_to_clipboard)
+copy_button.pack(pady=5)
 
 if __name__ == "__main__":
     app.mainloop()
