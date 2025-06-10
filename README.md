@@ -1,6 +1,6 @@
 # ClearSay
 
-ClearSay is a simple desktop application to help children like William practice speech. The initial version displays text from a placeholder model when the user clicks the **Start Transcription** button.
+ClearSay is a simple desktop application to help children like William practice speech. When you click **Start Transcription**, a file dialog opens so you can choose a `.wav` recording, which is then transcribed using a fine-tuned Whisper model.
 
 ## Requirements
 
