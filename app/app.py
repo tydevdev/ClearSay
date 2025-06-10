@@ -11,7 +11,15 @@ import sounddevice as sd
 # Configure appearance for dark mode
 
 ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("dark-blue")
+# Apply a modern blue color theme
+ctk.set_default_color_theme("blue")
+
+# Simple unicode icons for a cleaner UI
+START_ICON = "\u23FA"  # record symbol
+STOP_ICON = "\u23F9"   # stop symbol
+COPY_ICON = "\U0001F4CB"  # clipboard
+VIEW_ICON = "\U0001F5C2"  # card index dividers
+NEW_ICON = "\U0001F195"   # NEW button
 
 # Directories for recorded audio and saved transcripts
 RECORDING_DIR = "recorded_audio"
@@ -40,10 +48,13 @@ def toggle_recording():
         audio_queue.queue.clear()
         stream = sd.InputStream(samplerate=44100, channels=1, callback=audio_callback)
         stream.start()
-        start_button.configure(text="Stop Recording")
+        start_button.configure(
+            text=f"{STOP_ICON} Stop Recording",
+            font=ctk.CTkFont(size=16, weight="bold"),
+        )
         recording = True
     else:
-        start_button.configure(text="Processing Transcript", state="disabled")
+        start_button.configure(text="Processing...", state="disabled")
         start_button.update_idletasks()
         if stream is not None:
             stream.stop()
@@ -53,7 +64,7 @@ def toggle_recording():
             frames.append(audio_queue.get())
 
         if frames:
-            start_button.configure(text="Processing Transcript", state="disabled")
+            start_button.configure(text="Processing...", state="disabled")
             audio = np.concatenate(frames, axis=0)
             audio = np.int16(audio * 32767)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -80,7 +91,11 @@ def process_transcription(file_path: str) -> None:
     status_label.configure(text="")
     save_current_transcript()
 
-    start_button.configure(text="Start Recording", state="normal")
+    start_button.configure(
+        text=f"{START_ICON} Start Recording",
+        state="normal",
+        font=ctk.CTkFont(size=16, weight="bold"),
+    )
     recording = False
 
 
@@ -142,11 +157,13 @@ def toggle_transcripts_sidebar() -> None:
     """Show or hide the transcript sidebar."""
     global sidebar_visible
     if sidebar_visible:
-        transcripts_sidebar.pack_forget()
+        transcripts_sidebar.grid_remove()
+        view_button.configure(text=f"{VIEW_ICON} View Transcripts")
         sidebar_visible = False
     else:
         refresh_transcripts_list()
-        transcripts_sidebar.pack(side="left", fill="y", padx=5, pady=5)
+        transcripts_sidebar.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+        view_button.configure(text=f"{VIEW_ICON} Hide Transcripts")
         sidebar_visible = True
 
 
@@ -190,44 +207,81 @@ app.title("ClearSay")
 app.geometry("1000x600")
 app.minsize(800, 600)
 app.protocol("WM_DELETE_WINDOW", on_close)
+app.grid_columnconfigure(1, weight=1)
+app.grid_rowconfigure(0, weight=1)
 
 # Sidebar for transcript list
 transcripts_sidebar = ctk.CTkScrollableFrame(app, width=220)
 ctk.CTkLabel(transcripts_sidebar, text="Saved Transcripts").pack(pady=(10, 0))
 transcripts_list = ctk.CTkFrame(transcripts_sidebar)
 transcripts_list.pack(fill="both", expand=True, padx=5, pady=5)
-transcripts_sidebar.pack_forget()
+transcripts_sidebar.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+transcripts_sidebar.grid_remove()
 
 # Main content frame
 main_frame = ctk.CTkFrame(app)
-main_frame.pack(side="right", fill="both", expand=True)
+main_frame.grid(row=0, column=1, sticky="nsew")
+main_frame.grid_columnconfigure(0, weight=1)
+main_frame.grid_rowconfigure(3, weight=1)
 
-# Top controls
-top_frame = ctk.CTkFrame(main_frame)
-top_frame.pack(fill="x", pady=(10, 0))
-new_button = ctk.CTkButton(top_frame, text="New Transcription", command=new_transcription)
-new_button.pack(side="right", padx=5)
+# Instructions for first-time users
+instruction_label = ctk.CTkLabel(
+    main_frame,
+    text="Press 'Start Recording', speak, then wait for the transcription.",
+)
+instruction_label.grid(row=0, column=0, padx=20, pady=(10, 0), sticky="w")
+
+# Start/stop recording section
+recording_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+recording_frame.grid(row=1, column=0, pady=(10, 0))
+start_button = ctk.CTkButton(
+    recording_frame,
+    text=f"{START_ICON} Start Recording",
+    command=toggle_recording,
+    font=ctk.CTkFont(size=16, weight="bold"),
+    width=180,
+)
+start_button.pack()
 
 # Transcribed text display
-text_box = ctk.CTkTextbox(main_frame, width=550, height=400, state="disabled")
-text_box.pack(pady=20, padx=20)
+text_box = ctk.CTkTextbox(
+    main_frame,
+    width=550,
+    height=400,
+    state="disabled",
+    border_width=1,
+    corner_radius=8,
+)
+text_box.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
 
-# Buttons in a single row
-button_frame = ctk.CTkFrame(main_frame)
-button_frame.pack(pady=10)
+# Buttons for other actions
+button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+button_frame.grid(row=4, column=0, pady=10)
 
-start_button = ctk.CTkButton(button_frame, text="Start Recording", command=toggle_recording)
-start_button.pack(side="left", padx=5)
+copy_button = ctk.CTkButton(
+    button_frame,
+    text=f"{COPY_ICON} Copy Transcript",
+    command=copy_to_clipboard,
+)
+copy_button.grid(row=0, column=0, padx=5)
 
-copy_button = ctk.CTkButton(button_frame, text="Copy Transcript", command=copy_to_clipboard)
-copy_button.pack(side="left", padx=5)
+view_button = ctk.CTkButton(
+    button_frame,
+    text=f"{VIEW_ICON} View Transcripts",
+    command=toggle_transcripts_sidebar,
+)
+view_button.grid(row=0, column=1, padx=5)
 
-view_button = ctk.CTkButton(button_frame, text="View Transcripts", command=toggle_transcripts_sidebar)
-view_button.pack(side="left", padx=5)
+new_button = ctk.CTkButton(
+    button_frame,
+    text=f"{NEW_ICON} New Transcription",
+    command=new_transcription,
+)
+new_button.grid(row=0, column=2, padx=5)
 
 # Status label for simple feedback
 status_label = ctk.CTkLabel(main_frame, text="")
-status_label.pack(pady=5)
+status_label.grid(row=5, column=0, pady=(0, 10))
 
 if __name__ == "__main__":
     app.mainloop()
