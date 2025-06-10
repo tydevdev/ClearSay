@@ -12,6 +12,11 @@ import sounddevice as sd
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
+# Global UI colors
+TEXT_COLOR = "#000000"
+BUTTON_FG = "#d0e7ff"
+BUTTON_HOVER = "#b0d4ff"
+
 # Directories for recorded audio and saved transcripts
 RECORDING_DIR = "recorded_audio"
 TRANSCRIPT_DIR = "transcripts"
@@ -117,7 +122,7 @@ def save_current_transcript() -> None:
         status_label.configure(text="Failed to save transcript")
         return
     status_label.configure(text=f"Saved {os.path.basename(current_transcript_path)}")
-    refresh_transcripts_list()
+    refresh_transcripts_list(search_var.get())
 
 
 def clear_transcript() -> None:
@@ -144,6 +149,9 @@ def on_close() -> None:
 
 sidebar_visible = False
 
+# search variable for transcripts filtering
+search_var = ctk.StringVar()
+
 
 def apply_theme_colors() -> None:
     """Set background colors for the light theme."""
@@ -162,33 +170,40 @@ def toggle_transcripts_sidebar() -> None:
         view_button.configure(text="View Transcripts")
         sidebar_visible = False
     else:
-        refresh_transcripts_list()
-        transcripts_sidebar.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+        refresh_transcripts_list(search_var.get())
+        transcripts_sidebar.grid(row=1, column=0, sticky="ns", padx=5, pady=5)
         view_button.configure(text="Hide Transcripts")
         sidebar_visible = True
 
 
 
 
-def refresh_transcripts_list() -> None:
+def refresh_transcripts_list(filter_text: str = "") -> None:
     """Populate the sidebar with saved transcripts."""
     for widget in transcripts_list.winfo_children():
         widget.destroy()
     files = sorted(
         [f for f in os.listdir(TRANSCRIPT_DIR) if f.endswith(".txt")]
     )
+    if filter_text:
+        files = [f for f in files if filter_text.lower() in f.lower()]
     if files:
         for name in files:
             ctk.CTkButton(
                 transcripts_list,
                 text=name,
-                width=190,
-                anchor="e",
+                width=230,
+                anchor="w",
                 fg_color="transparent",
+                text_color=TEXT_COLOR,
                 command=lambda n=name: display_transcript(n),
             ).pack(fill="x", padx=5, pady=2)
     else:
-        ctk.CTkLabel(transcripts_list, text="No transcripts").pack(pady=5)
+        ctk.CTkLabel(
+            transcripts_list,
+            text="No transcripts",
+            text_color=TEXT_COLOR,
+        ).pack(pady=5)
 
 
 def display_transcript(name: str) -> None:
@@ -211,41 +226,74 @@ app.geometry("1000x600")
 app.minsize(800, 600)
 app.protocol("WM_DELETE_WINDOW", on_close)
 app.grid_columnconfigure(1, weight=1)
-app.grid_rowconfigure(0, weight=1)
+app.grid_rowconfigure(1, weight=1)
+
+# App name header
+header_label = ctk.CTkLabel(
+    app,
+    text="ClearSay",
+    font=ctk.CTkFont(size=24, weight="bold"),
+    text_color=TEXT_COLOR,
+    fg_color=("#b0d4ff", "#d0e7ff"),
+    corner_radius=8,
+)
+header_label.grid(row=0, column=0, columnspan=2, pady=(10, 5))
 
 # Sidebar for transcript list
-transcripts_sidebar = ctk.CTkScrollableFrame(app, width=220)
-ctk.CTkLabel(transcripts_sidebar, text="Saved Transcripts").pack(pady=(10, 0))
+transcripts_sidebar = ctk.CTkScrollableFrame(app, width=250)
+ctk.CTkLabel(
+    transcripts_sidebar,
+    text="Saved Transcripts",
+    text_color=TEXT_COLOR,
+).pack(pady=(10, 0))
+search_entry = ctk.CTkEntry(
+    transcripts_sidebar,
+    width=210,
+    textvariable=search_var,
+    placeholder_text="Search...",
+)
+search_entry.pack(pady=(0, 5))
+search_entry.bind(
+    "<KeyRelease>", lambda e: refresh_transcripts_list(search_var.get())
+)
 transcripts_list = ctk.CTkFrame(transcripts_sidebar)
 transcripts_list.pack(fill="both", expand=True, padx=5, pady=5)
-transcripts_sidebar.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+transcripts_sidebar.grid(row=1, column=0, sticky="ns", padx=5, pady=5)
 transcripts_sidebar.grid_remove()
 
 # Main content frame
 main_frame = ctk.CTkFrame(app)
-main_frame.grid(row=0, column=1, sticky="nsew")
+main_frame.grid(row=1, column=1, sticky="nsew")
 main_frame.grid_columnconfigure(0, weight=1)
-main_frame.grid_rowconfigure(3, weight=1)
+main_frame.grid_rowconfigure(4, weight=1)
 
 # Instructions for first-time users
 instruction_label = ctk.CTkLabel(
     main_frame,
     text="Press 'Start Recording', speak, then wait for the transcription.",
-    text_color="#003366",
+    text_color=TEXT_COLOR,
 )
-instruction_label.grid(row=0, column=0, padx=20, pady=(10, 0), sticky="w")
+instruction_label.grid(row=1, column=0, padx=20, pady=(10, 0), sticky="w")
 
 # Start/stop recording section
 recording_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-recording_frame.grid(row=1, column=0, pady=(10, 0))
+recording_frame.grid(row=2, column=0, pady=(10, 0))
 start_button = ctk.CTkButton(
     recording_frame,
     text="Start Recording",
     command=toggle_recording,
     font=ctk.CTkFont(size=16, weight="bold"),
     width=180,
+    fg_color=BUTTON_FG,
+    hover_color=BUTTON_HOVER,
+    text_color=TEXT_COLOR,
 )
 start_button.pack()
+
+try:
+    ctk.CTkToolTip(start_button, message="Start or stop recording (Space)")
+except Exception:
+    pass
 
 # Transcribed text display
 text_box = ctk.CTkTextbox(
@@ -256,39 +304,82 @@ text_box = ctk.CTkTextbox(
     border_width=1,
     corner_radius=8,
 )
-text_box.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
+text_box.grid(row=4, column=0, padx=20, pady=20, sticky="nsew")
 
 # Buttons for other actions
 button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-button_frame.grid(row=4, column=0, pady=10)
+button_frame.grid(row=5, column=0, pady=10)
 
 copy_button = ctk.CTkButton(
     button_frame,
     text="Copy Transcript",
     command=copy_to_clipboard,
+    fg_color=BUTTON_FG,
+    hover_color=BUTTON_HOVER,
+    text_color=TEXT_COLOR,
 )
 copy_button.grid(row=0, column=0, padx=5)
+try:
+    ctk.CTkToolTip(copy_button, message="Copy transcript to clipboard (Ctrl+C)")
+except Exception:
+    pass
 
 view_button = ctk.CTkButton(
     button_frame,
     text="View Transcripts",
     command=toggle_transcripts_sidebar,
+    fg_color=BUTTON_FG,
+    hover_color=BUTTON_HOVER,
+    text_color=TEXT_COLOR,
 )
 view_button.grid(row=0, column=1, padx=5)
+try:
+    ctk.CTkToolTip(view_button, message="Toggle transcript list (Ctrl+V)")
+except Exception:
+    pass
 
 new_button = ctk.CTkButton(
     button_frame,
     text="New Transcription",
     command=new_transcription,
+    fg_color=BUTTON_FG,
+    hover_color=BUTTON_HOVER,
+    text_color=TEXT_COLOR,
 )
 new_button.grid(row=0, column=2, padx=5)
+try:
+    ctk.CTkToolTip(new_button, message="New transcription (Ctrl+N)")
+except Exception:
+    pass
 
 # Status label for simple feedback
-status_label = ctk.CTkLabel(main_frame, text="", text_color="#003366")
-status_label.grid(row=5, column=0, pady=(0, 10))
+status_label = ctk.CTkLabel(main_frame, text="", text_color=TEXT_COLOR)
+status_label.grid(row=6, column=0, pady=(0, 10))
+
+# Scaling controls
+scaling_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+scaling_frame.grid(row=7, column=0, pady=(0, 10))
+ctk.CTkLabel(scaling_frame, text="Scale:", text_color=TEXT_COLOR).pack(
+    side="left", padx=(0, 5)
+)
+scale_slider = ctk.CTkSlider(
+    scaling_frame,
+    from_=80,
+    to=140,
+    number_of_steps=6,
+    command=lambda v: ctk.set_widget_scaling(float(v) / 100),
+)
+scale_slider.set(100)
+scale_slider.pack(side="left")
 
 # Apply custom background colors once widgets are created
 apply_theme_colors()
+
+# Keyboard shortcuts for accessibility
+app.bind("<space>", lambda _: toggle_recording())
+app.bind("<Control-c>", lambda _: copy_to_clipboard())
+app.bind("<Control-n>", lambda _: new_transcription())
+app.bind("<Control-v>", lambda _: toggle_transcripts_sidebar())
 
 if __name__ == "__main__":
     app.mainloop()
