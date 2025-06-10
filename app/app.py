@@ -8,14 +8,9 @@ from model import run_model
 import numpy as np
 import sounddevice as sd
 
-# Configure a clean, light appearance
-ctk.set_appearance_mode("light")
-
-# Accent colors for a more modern look
-PRIMARY_COLOR = "#b9d7f9"  # light baby blue
-HOVER_COLOR = "#a7cff3"
-BG_COLOR = "#ffffff"
-ACCENT_COLOR = "#f2f2f2"
+# Use a modern dark theme with CTk's default blue accents
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
 # Directories for recorded audio and saved transcripts
 RECORDING_DIR = "recorded_audio"
@@ -27,6 +22,7 @@ recording = False
 audio_queue: queue.Queue[np.ndarray] = queue.Queue()
 stream: sd.InputStream | None = None
 current_transcript_path: str | None = None
+current_theme = "dark"
 
 
 def audio_callback(indata, frames, time, status):
@@ -47,9 +43,6 @@ def toggle_recording():
         start_button.configure(
             text="Stop Recording",
             font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color=PRIMARY_COLOR,
-            hover_color=HOVER_COLOR,
-            text_color="black",
         )
         recording = True
     else:
@@ -94,9 +87,6 @@ def process_transcription(file_path: str) -> None:
         text="Start Recording",
         state="normal",
         font=ctk.CTkFont(size=16, weight="bold"),
-        fg_color=PRIMARY_COLOR,
-        hover_color=HOVER_COLOR,
-        text_color="black",
     )
     recording = False
 
@@ -169,6 +159,19 @@ def toggle_transcripts_sidebar() -> None:
         sidebar_visible = True
 
 
+def toggle_theme() -> None:
+    """Switch between light and dark appearance modes."""
+    global current_theme
+    if current_theme == "dark":
+        ctk.set_appearance_mode("light")
+        theme_button.configure(text="Dark Mode")
+        current_theme = "light"
+    else:
+        ctk.set_appearance_mode("dark")
+        theme_button.configure(text="Light Mode")
+        current_theme = "dark"
+
+
 def refresh_transcripts_list() -> None:
     """Populate the sidebar with saved transcripts."""
     for widget in transcripts_list.winfo_children():
@@ -204,7 +207,7 @@ def display_transcript(name: str) -> None:
 
 
 # Create main application window
-app = ctk.CTk(fg_color=BG_COLOR)
+app = ctk.CTk()
 app.title("ClearSay")
 app.geometry("1000x600")
 app.minsize(800, 600)
@@ -213,15 +216,15 @@ app.grid_columnconfigure(1, weight=1)
 app.grid_rowconfigure(0, weight=1)
 
 # Sidebar for transcript list
-transcripts_sidebar = ctk.CTkScrollableFrame(app, width=220, fg_color=ACCENT_COLOR)
+transcripts_sidebar = ctk.CTkScrollableFrame(app, width=220)
 ctk.CTkLabel(transcripts_sidebar, text="Saved Transcripts").pack(pady=(10, 0))
-transcripts_list = ctk.CTkFrame(transcripts_sidebar, fg_color=BG_COLOR)
+transcripts_list = ctk.CTkFrame(transcripts_sidebar)
 transcripts_list.pack(fill="both", expand=True, padx=5, pady=5)
 transcripts_sidebar.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
 transcripts_sidebar.grid_remove()
 
 # Main content frame
-main_frame = ctk.CTkFrame(app, fg_color=BG_COLOR)
+main_frame = ctk.CTkFrame(app)
 main_frame.grid(row=0, column=1, sticky="nsew")
 main_frame.grid_columnconfigure(0, weight=1)
 main_frame.grid_rowconfigure(3, weight=1)
@@ -243,9 +246,6 @@ start_button = ctk.CTkButton(
     command=toggle_recording,
     font=ctk.CTkFont(size=16, weight="bold"),
     width=180,
-    fg_color=PRIMARY_COLOR,
-    hover_color=HOVER_COLOR,
-    text_color="black",
 )
 start_button.pack()
 
@@ -257,7 +257,6 @@ text_box = ctk.CTkTextbox(
     state="disabled",
     border_width=1,
     corner_radius=8,
-    fg_color=ACCENT_COLOR,
 )
 text_box.grid(row=3, column=0, padx=20, pady=20, sticky="nsew")
 
@@ -269,9 +268,6 @@ copy_button = ctk.CTkButton(
     button_frame,
     text="Copy Transcript",
     command=copy_to_clipboard,
-    fg_color=PRIMARY_COLOR,
-    hover_color=HOVER_COLOR,
-    text_color="black",
 )
 copy_button.grid(row=0, column=0, padx=5)
 
@@ -279,9 +275,6 @@ view_button = ctk.CTkButton(
     button_frame,
     text="View Transcripts",
     command=toggle_transcripts_sidebar,
-    fg_color=PRIMARY_COLOR,
-    hover_color=HOVER_COLOR,
-    text_color="black",
 )
 view_button.grid(row=0, column=1, padx=5)
 
@@ -289,11 +282,15 @@ new_button = ctk.CTkButton(
     button_frame,
     text="New Transcription",
     command=new_transcription,
-    fg_color=PRIMARY_COLOR,
-    hover_color=HOVER_COLOR,
-    text_color="black",
 )
 new_button.grid(row=0, column=2, padx=5)
+
+theme_button = ctk.CTkButton(
+    button_frame,
+    text="Light Mode",
+    command=toggle_theme,
+)
+theme_button.grid(row=0, column=3, padx=5)
 
 # Status label for simple feedback
 status_label = ctk.CTkLabel(main_frame, text="", text_color="#555555")
