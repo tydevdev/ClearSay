@@ -15,3 +15,7 @@ venv/
 
 __pycache__/
 *.pyc
+
+# Generated transcripts and recordings
+transcripts/
+recorded_audio/
