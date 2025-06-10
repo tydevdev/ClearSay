@@ -1,7 +1,8 @@
 import os
+import threading
 import customtkinter as ctk
 
-from constants import BUTTON_FG, BUTTON_HOVER, TEXT_COLOR
+from constants import BUTTON_FG, BUTTON_HOVER, TEXT_COLOR, TRANSCRIPT_DIR
 from model import run_model
 from recorder import Recorder
 from transcripts import TranscriptManager
@@ -9,10 +10,15 @@ from transcripts import TranscriptManager
 
 class ClearSayUI:
     def __init__(self, recorder: Recorder, transcripts: TranscriptManager) -> None:
+        """Initialize the UI with the recorder and transcript manager."""
+
         self.recorder = recorder
         self.transcripts = transcripts
         self.sidebar_visible = False
-        self.search_var = ctk.StringVar()
+
+        # App root must exist before any Tk variables are created
+        self.app: ctk.CTk | None = None
+        self.search_var: ctk.StringVar | None = None
         self._build()
 
     def _build(self) -> None:
@@ -20,6 +26,7 @@ class ClearSayUI:
         ctk.set_default_color_theme("blue")
 
         self.app = ctk.CTk()
+        self.search_var = ctk.StringVar()
         self.app.title("ClearSay")
         self.app.geometry("1000x600")
         self.app.minsize(800, 600)
@@ -182,17 +189,26 @@ class ClearSayUI:
     # Methods mapped from original functions
     def toggle_recording(self) -> None:
         if not self.recorder.recording:
-            self.recorder.start()
+            try:
+                self.recorder.start()
+            except Exception as exc:  # Recording can fail if no mic is present
+                self.status_label.configure(text=f"Recording error: {exc}")
+                return
             self.start_button.configure(
                 text="Stop Recording",
                 font=ctk.CTkFont(size=16, weight="bold"),
             )
         else:
             self.start_button.configure(text="Processing...", state="disabled")
+            self.status_label.configure(text="Transcribing...")
             self.start_button.update_idletasks()
             file_path = self.recorder.stop()
             if file_path:
-                self.app.after(100, lambda: self.process_transcription(file_path))
+                threading.Thread(
+                    target=self.process_transcription,
+                    args=(file_path,),
+                    daemon=True,
+                ).start()
             else:
                 self.start_button.configure(
                     text="Start Recording",
@@ -201,7 +217,12 @@ class ClearSayUI:
                 )
 
     def process_transcription(self, file_path: str) -> None:
+        """Run the model and update the UI when finished."""
+
         transcription = run_model(file_path)
+        self.app.after(0, lambda: self._update_transcription_ui(transcription))
+
+    def _update_transcription_ui(self, transcription: str) -> None:
         self.text_box.configure(state="normal")
         if self.text_box.get("1.0", "end").strip():
             self.text_box.insert("end", "\n" + transcription)
@@ -210,6 +231,7 @@ class ClearSayUI:
         self.text_box.configure(state="disabled")
         self.status_label.configure(text="")
         self.save_current_transcript()
+        self.refresh_transcripts_list(self.search_var.get())
         self.start_button.configure(
             text="Start Recording",
             state="normal",
@@ -290,6 +312,8 @@ class ClearSayUI:
         content = self.transcripts.load(name)
         if content is None:
             return
+        # allow subsequent saves to overwrite the opened transcript
+        self.transcripts.current_path = os.path.join(TRANSCRIPT_DIR, name)
         self.text_box.configure(state="normal")
         self.text_box.delete("1.0", "end")
         self.text_box.insert("1.0", content)

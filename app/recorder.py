@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 
-from constants import RECORDING_DIR
+from constants import RECORDING_DIR, SAMPLE_RATE
 
 
 class Recorder:
@@ -27,9 +27,19 @@ class Recorder:
         """Begin recording from the microphone."""
         if self.recording:
             return
-        self.audio_queue.queue.clear()
-        self.stream = sd.InputStream(samplerate=44100, channels=1, callback=self._callback)
-        self.stream.start()
+        # create a new queue to avoid thread-safety issues
+        self.audio_queue = queue.Queue()
+        try:
+            self.stream = sd.InputStream(
+                samplerate=SAMPLE_RATE,
+                channels=1,
+                callback=self._callback,
+            )
+            self.stream.start()
+        except Exception as exc:
+            print(f"Failed to start recording: {exc}")
+            self.stream = None
+            return
         self.recording = True
 
     def stop(self) -> Optional[str]:
@@ -43,8 +53,13 @@ class Recorder:
         if not self.recording:
             return None
         if self.stream is not None:
-            self.stream.stop()
-            self.stream.close()
+            try:
+                self.stream.stop()
+                self.stream.close()
+            except Exception as exc:
+                print(f"Failed to stop recording: {exc}")
+            finally:
+                self.stream = None
         frames = []
         while not self.audio_queue.empty():
             frames.append(self.audio_queue.get())
@@ -58,6 +73,6 @@ class Recorder:
         with wave.open(file_path, "wb") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
-            wf.setframerate(44100)
+            wf.setframerate(SAMPLE_RATE)
             wf.writeframes(audio.tobytes())
         return file_path
