@@ -13,7 +13,7 @@ import sounddevice as sd
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
-# Directorys for recorded audio and saved transcripts
+# Directories for recorded audio and saved transcripts
 RECORDING_DIR = "recorded_audio"
 TRANSCRIPT_DIR = "transcripts"
 os.makedirs(RECORDING_DIR, exist_ok=True)
@@ -73,20 +73,7 @@ def process_transcription(file_path: str) -> None:
     text_box.configure(state="normal")
     text_box.insert("end", "\n" + transcription)
     text_box.configure(state="disabled")
-
-    # Save transcript alongside the recorded audio
-    timestamp = os.path.splitext(os.path.basename(file_path))[0].replace(
-        "recording_", ""
-    )
-    transcript_path = os.path.join(
-        TRANSCRIPT_DIR, f"transcript_{timestamp}.txt"
-    )
-    try:
-        with open(transcript_path, "w", encoding="utf-8") as f:
-            f.write(transcription.strip() + "\n")
-        status_label.configure(text=f"Saved {os.path.basename(transcript_path)}")
-    except OSError:
-        status_label.configure(text="Failed to save transcript")
+    status_label.configure(text="")
 
     start_button.configure(text="Start Recording", state="normal")
     recording = False
@@ -101,38 +88,70 @@ def copy_to_clipboard() -> None:
 
 
 def clear_transcript() -> None:
-    """Remove all text from the transcript display."""
+    """Save current text and clear the transcript display."""
+    text = text_box.get("1.0", "end").strip()
+    if text:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        transcript_path = os.path.join(
+            TRANSCRIPT_DIR, f"transcript_{timestamp}.txt"
+        )
+        try:
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                f.write(text + "\n")
+            status_label.configure(text=f"Saved {os.path.basename(transcript_path)}")
+        except OSError:
+            status_label.configure(text="Failed to save transcript")
     text_box.configure(state="normal")
     text_box.delete("1.0", "end")
     text_box.configure(state="disabled")
+    refresh_transcripts_list()
 
 
 def view_transcripts() -> None:
-    """Open a transcript file and display its contents."""
-    path = ctk.filedialog.askopenfilename(
-        initialdir=TRANSCRIPT_DIR,
-        title="Open Transcript",
-        filetypes=[("Text files", "*.txt")],
+    """Display the transcript viewer inside the app window."""
+    refresh_transcripts_list()
+    transcripts_frame.pack(fill="both", expand=True, pady=10)
+
+
+def refresh_transcripts_list() -> None:
+    """Refresh the dropdown with saved transcripts."""
+    files = sorted(
+        [f for f in os.listdir(TRANSCRIPT_DIR) if f.endswith(".txt")]
     )
-    if path:
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-        top = ctk.CTkToplevel(app)
-        top.title(os.path.basename(path))
-        viewer = ctk.CTkTextbox(top, width=350, height=150)
-        viewer.insert("1.0", content)
-        viewer.configure(state="disabled")
-        viewer.pack(padx=20, pady=20)
-        ctk.CTkButton(top, text="Close", command=top.destroy).pack(pady=10)
+    if files:
+        transcript_menu.configure(values=files)
+        transcript_menu.set(files[0])
+        display_transcript(files[0])
+    else:
+        transcript_menu.configure(values=["No transcripts"])
+        transcript_menu.set("No transcripts")
+        transcript_viewer.configure(state="normal")
+        transcript_viewer.delete("1.0", "end")
+        transcript_viewer.insert("1.0", "")
+        transcript_viewer.configure(state="disabled")
+
+
+def display_transcript(name: str) -> None:
+    """Show the contents of ``name`` in the transcript viewer."""
+    path = os.path.join(TRANSCRIPT_DIR, name)
+    if not os.path.exists(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+    transcript_viewer.configure(state="normal")
+    transcript_viewer.delete("1.0", "end")
+    transcript_viewer.insert("1.0", content)
+    transcript_viewer.configure(state="disabled")
 
 
 # Create main application window
 app = ctk.CTk()
 app.title("ClearSay")
-app.geometry("400x300")
+app.geometry("600x800")
+app.minsize(600, 800)
 
 # Transcribed text display
-text_box = ctk.CTkTextbox(app, width=350, height=150, state="disabled")
+text_box = ctk.CTkTextbox(app, width=550, height=400, state="disabled")
 text_box.pack(pady=20)
 
 # Recording control button
@@ -148,8 +167,28 @@ clear_button = ctk.CTkButton(app, text="Clear Transcript", command=clear_transcr
 clear_button.pack(pady=5)
 
 # View saved transcripts button
-view_button = ctk.CTkButton(app, text="View Transcripts", command=view_transcripts)
+view_button = ctk.CTkButton(
+    app, text="View Transcripts", command=view_transcripts
+)
 view_button.pack(pady=5)
+
+# Frame for in-app transcript viewer
+transcripts_frame = ctk.CTkFrame(app)
+transcripts_frame.pack_forget()
+
+ctk.CTkLabel(transcripts_frame, text="Saved Transcripts").pack(pady=5)
+transcript_menu = ctk.CTkOptionMenu(
+    transcripts_frame, values=[], command=display_transcript
+)
+transcript_menu.pack(pady=5)
+
+transcript_viewer = ctk.CTkTextbox(transcripts_frame, width=550, height=200)
+transcript_viewer.configure(state="disabled")
+transcript_viewer.pack(padx=20, pady=5, fill="both", expand=True)
+
+ctk.CTkButton(
+    transcripts_frame, text="Hide", command=lambda: transcripts_frame.pack_forget()
+).pack(pady=5)
 
 # Status label for simple feedback
 status_label = ctk.CTkLabel(app, text="")
