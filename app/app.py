@@ -40,6 +40,8 @@ def toggle_recording():
         start_button.configure(text="Stop Recording")
         recording = True
     else:
+        start_button.configure(text="Processing Transcript", state="disabled")
+        start_button.update_idletasks()
         if stream is not None:
             stream.stop()
             stream.close()
@@ -48,25 +50,34 @@ def toggle_recording():
             frames.append(audio_queue.get())
 
         if frames:
-            audio = np.concatenate(frames, axis=0)
-            audio = np.int16(audio * 32767)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            file_path = os.path.join(RECORDING_DIR, f"recording_{timestamp}.wav")
-            with wave.open(file_path, "wb") as wf:
-                wf.setnchannels(1)
-                wf.setsampwidth(2)
-                wf.setframerate(44100)
-                wf.writeframes(audio.tobytes())
+            app.after(10, lambda f=frames: transcribe_frames(f))
+        else:
+            start_button.configure(text="Start Recording", state="normal")
+            recording = False
 
-            # Transcribe the saved recording and display the result
-            transcription = run_model(file_path)
-            text_box.configure(state="normal")
-            text_box.delete("1.0", "end")
-            text_box.insert("end", transcription)
-            text_box.configure(state="disabled")
 
-        start_button.configure(text="Start Recording")
-        recording = False
+def transcribe_frames(frames: list[np.ndarray]) -> None:
+    """Save audio ``frames`` to disk and run transcription."""
+    global recording
+
+    audio = np.concatenate(frames, axis=0)
+    audio = np.int16(audio * 32767)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    file_path = os.path.join(RECORDING_DIR, f"recording_{timestamp}.wav")
+    with wave.open(file_path, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes(audio.tobytes())
+
+    transcription = run_model(file_path)
+    text_box.configure(state="normal")
+    text_box.delete("1.0", "end")
+    text_box.insert("end", transcription)
+    text_box.configure(state="disabled")
+
+    start_button.configure(text="Start Recording", state="normal")
+    recording = False
 
 
 # Create main application window
