@@ -107,91 +107,92 @@ def clear_transcript() -> None:
     refresh_transcripts_list()
 
 
-def view_transcripts() -> None:
-    """Display the transcript viewer inside the app window."""
-    refresh_transcripts_list()
-    transcripts_frame.pack(fill="both", expand=True, pady=10)
+sidebar_visible = False
+
+
+def toggle_transcripts_sidebar() -> None:
+    """Show or hide the transcript sidebar."""
+    global sidebar_visible
+    if sidebar_visible:
+        transcripts_sidebar.pack_forget()
+        sidebar_visible = False
+    else:
+        refresh_transcripts_list()
+        transcripts_sidebar.pack(side="left", fill="y", padx=5, pady=5)
+        sidebar_visible = True
 
 
 def refresh_transcripts_list() -> None:
-    """Refresh the dropdown with saved transcripts."""
+    """Populate the sidebar with saved transcripts."""
+    for widget in transcripts_list.winfo_children():
+        widget.destroy()
     files = sorted(
         [f for f in os.listdir(TRANSCRIPT_DIR) if f.endswith(".txt")]
     )
     if files:
-        transcript_menu.configure(values=files)
-        transcript_menu.set(files[0])
-        display_transcript(files[0])
+        for name in files:
+            ctk.CTkButton(
+                transcripts_list,
+                text=name,
+                width=180,
+                anchor="w",
+                command=lambda n=name: display_transcript(n),
+            ).pack(fill="x", padx=5, pady=2)
     else:
-        transcript_menu.configure(values=["No transcripts"])
-        transcript_menu.set("No transcripts")
-        transcript_viewer.configure(state="normal")
-        transcript_viewer.delete("1.0", "end")
-        transcript_viewer.insert("1.0", "")
-        transcript_viewer.configure(state="disabled")
+        ctk.CTkLabel(transcripts_list, text="No transcripts").pack(pady=5)
 
 
 def display_transcript(name: str) -> None:
-    """Show the contents of ``name`` in the transcript viewer."""
+    """Load ``name`` into the main transcript box."""
     path = os.path.join(TRANSCRIPT_DIR, name)
     if not os.path.exists(path):
         return
     with open(path, "r", encoding="utf-8") as f:
         content = f.read()
-    transcript_viewer.configure(state="normal")
-    transcript_viewer.delete("1.0", "end")
-    transcript_viewer.insert("1.0", content)
-    transcript_viewer.configure(state="disabled")
+    text_box.configure(state="normal")
+    text_box.delete("1.0", "end")
+    text_box.insert("1.0", content)
+    text_box.configure(state="disabled")
 
 
 # Create main application window
 app = ctk.CTk()
 app.title("ClearSay")
-app.geometry("600x800")
-app.minsize(600, 800)
+app.geometry("1000x600")
+app.minsize(800, 600)
+
+# Sidebar for transcript list
+transcripts_sidebar = ctk.CTkScrollableFrame(app, width=200)
+transcripts_list = ctk.CTkFrame(transcripts_sidebar)
+transcripts_list.pack(fill="both", expand=True)
+transcripts_sidebar.pack_forget()
+
+# Main content frame
+main_frame = ctk.CTkFrame(app)
+main_frame.pack(side="right", fill="both", expand=True)
 
 # Transcribed text display
-text_box = ctk.CTkTextbox(app, width=550, height=400, state="disabled")
-text_box.pack(pady=20)
+text_box = ctk.CTkTextbox(main_frame, width=550, height=400, state="disabled")
+text_box.pack(pady=20, padx=20)
 
-# Recording control button
-start_button = ctk.CTkButton(app, text="Start Recording", command=toggle_recording)
-start_button.pack(pady=10)
+# Buttons in a single row
+button_frame = ctk.CTkFrame(main_frame)
+button_frame.pack(pady=10)
 
-# Copy to clipboard button
-copy_button = ctk.CTkButton(app, text="Copy Transcript", command=copy_to_clipboard)
-copy_button.pack(pady=5)
+start_button = ctk.CTkButton(button_frame, text="Start Recording", command=toggle_recording)
+start_button.pack(side="left", padx=5)
 
-# Clear transcript button
-clear_button = ctk.CTkButton(app, text="Clear Transcript", command=clear_transcript)
-clear_button.pack(pady=5)
+copy_button = ctk.CTkButton(button_frame, text="Copy Transcript", command=copy_to_clipboard)
+copy_button.pack(side="left", padx=5)
 
-# View saved transcripts button
-view_button = ctk.CTkButton(
-    app, text="View Transcripts", command=view_transcripts
-)
-view_button.pack(pady=5)
+clear_button = ctk.CTkButton(button_frame, text="Clear Transcript", command=clear_transcript)
+clear_button.pack(side="left", padx=5)
 
-# Frame for in-app transcript viewer
-transcripts_frame = ctk.CTkFrame(app)
-transcripts_frame.pack_forget()
-
-ctk.CTkLabel(transcripts_frame, text="Saved Transcripts").pack(pady=5)
-transcript_menu = ctk.CTkOptionMenu(
-    transcripts_frame, values=[], command=display_transcript
-)
-transcript_menu.pack(pady=5)
-
-transcript_viewer = ctk.CTkTextbox(transcripts_frame, width=550, height=200)
-transcript_viewer.configure(state="disabled")
-transcript_viewer.pack(padx=20, pady=5, fill="both", expand=True)
-
-ctk.CTkButton(
-    transcripts_frame, text="Hide", command=lambda: transcripts_frame.pack_forget()
-).pack(pady=5)
+view_button = ctk.CTkButton(button_frame, text="View Transcripts", command=toggle_transcripts_sidebar)
+view_button.pack(side="left", padx=5)
 
 # Status label for simple feedback
-status_label = ctk.CTkLabel(app, text="")
+status_label = ctk.CTkLabel(main_frame, text="")
 status_label.pack(pady=5)
 
 if __name__ == "__main__":
