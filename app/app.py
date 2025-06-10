@@ -48,6 +48,7 @@ def toggle_recording():
             frames.append(audio_queue.get())
 
         if frames:
+            start_button.configure(text="Processing Transcript", state="disabled")
             audio = np.concatenate(frames, axis=0)
             audio = np.int16(audio * 32767)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -65,7 +66,7 @@ def toggle_recording():
             text_box.insert("end", transcription)
             text_box.configure(state="disabled")
 
-        start_button.configure(text="Start Recording")
+        start_button.configure(text="Start Recording", state="normal")
         recording = False
 
 
