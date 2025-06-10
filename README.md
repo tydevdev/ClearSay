@@ -21,4 +21,5 @@ Execute the application from the `app` folder:
 python app.py
 ```
 
-A dark-themed window will appear with a button to trigger the dummy transcription model.
+The app opens in dark mode with a modern look. Use the **Light Mode** button to
+switch between light and dark themes while running.
