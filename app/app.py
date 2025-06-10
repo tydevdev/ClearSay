@@ -22,7 +22,7 @@ recording = False
 audio_queue: queue.Queue[np.ndarray] = queue.Queue()
 stream: sd.InputStream | None = None
 current_transcript_path: str | None = None
-current_theme = "light"
+
 
 
 def audio_callback(indata, frames, time, status):
@@ -146,14 +146,12 @@ sidebar_visible = False
 
 
 def apply_theme_colors() -> None:
-    """Set custom background colors based on the current theme."""
-    color_light = "#F0F4FF"
-    color_dark = "#1A233A"
-    color = color_light if current_theme == "light" else color_dark
-    app.configure(fg_color=color)
-    main_frame.configure(fg_color=color)
-    transcripts_sidebar.configure(fg_color=color)
-    transcripts_list.configure(fg_color=color)
+    """Set background colors for the light theme."""
+    gradient = ("#FFFFFF", "#EAF6FF")
+    app.configure(fg_color=gradient)
+    main_frame.configure(fg_color=gradient)
+    transcripts_sidebar.configure(fg_color=gradient)
+    transcripts_list.configure(fg_color=gradient)
 
 
 def toggle_transcripts_sidebar() -> None:
@@ -170,18 +168,6 @@ def toggle_transcripts_sidebar() -> None:
         sidebar_visible = True
 
 
-def toggle_theme() -> None:
-    """Switch between light and dark appearance modes."""
-    global current_theme
-    if current_theme == "dark":
-        ctk.set_appearance_mode("light")
-        theme_button.configure(text="Dark Mode")
-        current_theme = "light"
-    else:
-        ctk.set_appearance_mode("dark")
-        theme_button.configure(text="Light Mode")
-        current_theme = "dark"
-    apply_theme_colors()
 
 
 def refresh_transcripts_list() -> None:
@@ -245,7 +231,7 @@ main_frame.grid_rowconfigure(3, weight=1)
 instruction_label = ctk.CTkLabel(
     main_frame,
     text="Press 'Start Recording', speak, then wait for the transcription.",
-    text_color="#555555",
+    text_color="#003366",
 )
 instruction_label.grid(row=0, column=0, padx=20, pady=(10, 0), sticky="w")
 
@@ -297,15 +283,8 @@ new_button = ctk.CTkButton(
 )
 new_button.grid(row=0, column=2, padx=5)
 
-theme_button = ctk.CTkButton(
-    button_frame,
-    text="Dark Mode",
-    command=toggle_theme,
-)
-theme_button.grid(row=0, column=3, padx=5)
-
 # Status label for simple feedback
-status_label = ctk.CTkLabel(main_frame, text="", text_color="#555555")
+status_label = ctk.CTkLabel(main_frame, text="", text_color="#003366")
 status_label.grid(row=5, column=0, pady=(0, 10))
 
 # Apply custom background colors once widgets are created
