@@ -1,33 +1,59 @@
 import customtkinter as ctk
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
+import queue
+from datetime import datetime
+import wave
+import numpy as np
+import sounddevice as sd
 
 # Configure appearance for dark mode
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
-from model import run_model
+recording = False
+audio_queue: queue.Queue[np.ndarray] = queue.Queue()
+stream: sd.InputStream | None = None
 
 
-def start_transcription():
-    """Prompt for an audio file, transcribe it and display the result."""
+def audio_callback(indata, frames, time, status):
+    """Collect audio chunks from the ``InputStream`` callback."""
+    if status:
+        print(status)
+    audio_queue.put(indata.copy())
 
-    # Ask user to choose a WAV file
-    audio_path = filedialog.askopenfilename(
-        title="Select audio file", filetypes=[("WAV Files", "*.wav")]
-    )
-    if not audio_path:
-        return
 
-    try:
-        result = run_model(audio_path)
-    except Exception as exc:  # Catch model errors or file issues
-        messagebox.showerror("Transcription Error", str(exc))
-        return
+def toggle_recording():
+    """Start or stop audio recording depending on the current state."""
+    global recording, stream
 
-    text_box.configure(state="normal")
-    text_box.delete("1.0", ctk.END)
-    text_box.insert(ctk.END, result)
-    text_box.configure(state="disabled")
+    if not recording:
+        audio_queue.queue.clear()
+        stream = sd.InputStream(samplerate=44100, channels=1, callback=audio_callback)
+        stream.start()
+        start_button.configure(text="Stop Recording")
+        recording = True
+    else:
+        if stream is not None:
+            stream.stop()
+            stream.close()
+        frames = []
+        while not audio_queue.empty():
+            frames.append(audio_queue.get())
+
+        if frames:
+            audio = np.concatenate(frames, axis=0)
+            audio = np.int16(audio * 32767)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_path = f"recording_{timestamp}.wav"
+            with wave.open(file_path, "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(44100)
+                wf.writeframes(audio.tobytes())
+            messagebox.showinfo("Recording Saved", f"Audio saved to {file_path}")
+
+        start_button.configure(text="Start Recording")
+        recording = False
 
 
 # Create main application window
@@ -39,8 +65,8 @@ app.geometry("400x300")
 text_box = ctk.CTkTextbox(app, width=350, height=150, state="disabled")
 text_box.pack(pady=20)
 
-# Start Transcription button
-start_button = ctk.CTkButton(app, text="Start Transcription", command=start_transcription)
+# Recording control button
+start_button = ctk.CTkButton(app, text="Start Recording", command=toggle_recording)
 start_button.pack(pady=10)
 
 if __name__ == "__main__":
