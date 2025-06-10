@@ -22,6 +22,7 @@ os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
 recording = False
 audio_queue: queue.Queue[np.ndarray] = queue.Queue()
 stream: sd.InputStream | None = None
+current_transcript_path: str | None = None
 
 
 def audio_callback(indata, frames, time, status):
@@ -71,9 +72,13 @@ def process_transcription(file_path: str) -> None:
     global recording
     transcription = run_model(file_path)
     text_box.configure(state="normal")
-    text_box.insert("end", "\n" + transcription)
+    if text_box.get("1.0", "end").strip():
+        text_box.insert("end", "\n" + transcription)
+    else:
+        text_box.insert("end", transcription)
     text_box.configure(state="disabled")
     status_label.configure(text="")
+    save_current_transcript()
 
     start_button.configure(text="Start Recording", state="normal")
     recording = False
@@ -87,32 +92,47 @@ def copy_to_clipboard() -> None:
         app.clipboard_append(text)
 
 
-def clear_transcript() -> None:
-    """Save current text and clear the transcript display."""
+def save_current_transcript() -> None:
+    """Write current transcript text to a file."""
+    global current_transcript_path
     text = text_box.get("1.0", "end").strip()
-    if text:
+    if not text:
+        return
+    if current_transcript_path is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        transcript_path = os.path.join(
+        current_transcript_path = os.path.join(
             TRANSCRIPT_DIR, f"transcript_{timestamp}.txt"
         )
-        try:
-            with open(transcript_path, "w", encoding="utf-8") as f:
-                f.write(text + "\n")
-            status_label.configure(text=f"Saved {os.path.basename(transcript_path)}")
-        except OSError:
-            status_label.configure(text="Failed to save transcript")
-    text_box.configure(state="normal")
-    text_box.delete("1.0", "end")
-    text_box.configure(state="disabled")
+    try:
+        with open(current_transcript_path, "w", encoding="utf-8") as f:
+            f.write(text + "\n")
+    except OSError:
+        status_label.configure(text="Failed to save transcript")
+        return
+    status_label.configure(text=f"Saved {os.path.basename(current_transcript_path)}")
     refresh_transcripts_list()
 
 
-def new_transcription() -> None:
-    """Clear the transcript area without saving previous text."""
+def clear_transcript() -> None:
+    """Save current text and clear the transcript display."""
+    save_current_transcript()
     text_box.configure(state="normal")
     text_box.delete("1.0", "end")
     text_box.configure(state="disabled")
+    global current_transcript_path
+    current_transcript_path = None
+
+
+def new_transcription() -> None:
+    """Save current transcript and start a new one."""
+    clear_transcript()
     status_label.configure(text="")
+
+
+def on_close() -> None:
+    """Handle window close by saving current transcript."""
+    save_current_transcript()
+    app.destroy()
 
 
 sidebar_visible = False
@@ -143,7 +163,7 @@ def refresh_transcripts_list() -> None:
                 transcripts_list,
                 text=name,
                 width=190,
-                anchor="w",
+                anchor="e",
                 fg_color="transparent",
                 command=lambda n=name: display_transcript(n),
             ).pack(fill="x", padx=5, pady=2)
@@ -169,6 +189,7 @@ app = ctk.CTk()
 app.title("ClearSay")
 app.geometry("1000x600")
 app.minsize(800, 600)
+app.protocol("WM_DELETE_WINDOW", on_close)
 
 # Sidebar for transcript list
 transcripts_sidebar = ctk.CTkScrollableFrame(app, width=220)
@@ -200,9 +221,6 @@ start_button.pack(side="left", padx=5)
 
 copy_button = ctk.CTkButton(button_frame, text="Copy Transcript", command=copy_to_clipboard)
 copy_button.pack(side="left", padx=5)
-
-clear_button = ctk.CTkButton(button_frame, text="Clear Transcript", command=clear_transcript)
-clear_button.pack(side="left", padx=5)
 
 view_button = ctk.CTkButton(button_frame, text="View Transcripts", command=toggle_transcripts_sidebar)
 view_button.pack(side="left", padx=5)
