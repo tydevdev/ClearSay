@@ -1,6 +1,6 @@
 # ClearSay
 
-ClearSay is a simple desktop application to help children like William practice speech. When you click **Start Transcription**, a file dialog opens so you can choose a `.wav` recording, which is then transcribed using a fine-tuned Whisper model.
+ClearSay is a simple desktop application to help children like William practice speech. Click **Start Recording** and the app records from your microphone before transcribing it with a fine-tuned Whisper model. Each recording is saved in `recorded_audio/` and the matching transcript is written to `transcripts/`.
 
 ## Requirements
 
