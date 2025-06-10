@@ -21,5 +21,4 @@ Execute the application from the `app` folder:
 python app.py
 ```
 
-The app opens in dark mode with a modern look. Use the **Light Mode** button to
-switch between light and dark themes while running.
+The app now uses a single light theme with soft blue accents for readability.
