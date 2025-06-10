@@ -40,6 +40,8 @@ def toggle_recording():
         start_button.configure(text="Stop Recording")
         recording = True
     else:
+        start_button.configure(text="Processing Transcript", state="disabled")
+        start_button.update_idletasks()
         if stream is not None:
             stream.stop()
             stream.close()
