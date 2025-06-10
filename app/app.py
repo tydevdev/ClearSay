@@ -8,8 +8,8 @@ from model import run_model
 import numpy as np
 import sounddevice as sd
 
-# Use a modern dark theme with CTk's default blue accents
-ctk.set_appearance_mode("dark")
+# Use a light theme by default with blue accents
+ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
 # Directories for recorded audio and saved transcripts
@@ -22,7 +22,7 @@ recording = False
 audio_queue: queue.Queue[np.ndarray] = queue.Queue()
 stream: sd.InputStream | None = None
 current_transcript_path: str | None = None
-current_theme = "dark"
+current_theme = "light"
 
 
 def audio_callback(indata, frames, time, status):
@@ -145,6 +145,17 @@ def on_close() -> None:
 sidebar_visible = False
 
 
+def apply_theme_colors() -> None:
+    """Set custom background colors based on the current theme."""
+    color_light = "#F0F4FF"
+    color_dark = "#1A233A"
+    color = color_light if current_theme == "light" else color_dark
+    app.configure(fg_color=color)
+    main_frame.configure(fg_color=color)
+    transcripts_sidebar.configure(fg_color=color)
+    transcripts_list.configure(fg_color=color)
+
+
 def toggle_transcripts_sidebar() -> None:
     """Show or hide the transcript sidebar."""
     global sidebar_visible
@@ -170,6 +181,7 @@ def toggle_theme() -> None:
         ctk.set_appearance_mode("dark")
         theme_button.configure(text="Light Mode")
         current_theme = "dark"
+    apply_theme_colors()
 
 
 def refresh_transcripts_list() -> None:
@@ -287,7 +299,7 @@ new_button.grid(row=0, column=2, padx=5)
 
 theme_button = ctk.CTkButton(
     button_frame,
-    text="Light Mode",
+    text="Dark Mode",
     command=toggle_theme,
 )
 theme_button.grid(row=0, column=3, padx=5)
@@ -295,6 +307,9 @@ theme_button.grid(row=0, column=3, padx=5)
 # Status label for simple feedback
 status_label = ctk.CTkLabel(main_frame, text="", text_color="#555555")
 status_label.grid(row=5, column=0, pady=(0, 10))
+
+# Apply custom background colors once widgets are created
+apply_theme_colors()
 
 if __name__ == "__main__":
     app.mainloop()
