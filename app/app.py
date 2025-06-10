@@ -3,6 +3,7 @@ import os
 import queue
 from datetime import datetime
 import wave
+from tkinter import filedialog
 
 from model import run_model
 import numpy as np
@@ -13,9 +14,11 @@ import sounddevice as sd
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
-# Directory where recordings are stored
+# Directory where recordings and transcripts are stored
 RECORDING_DIR = "recorded_audio"
+TRANSCRIPT_DIR = "transcripts"
 os.makedirs(RECORDING_DIR, exist_ok=True)
+os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
 
 recording = False
 audio_queue: queue.Queue[np.ndarray] = queue.Queue()
@@ -72,6 +75,13 @@ def process_transcription(file_path: str) -> None:
     text_box.delete("1.0", "end")
     text_box.insert("end", transcription)
     text_box.configure(state="disabled")
+
+    # Save the transcript so it can be viewed later
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    transcript_path = os.path.join(TRANSCRIPT_DIR, f"transcript_{timestamp}.txt")
+    with open(transcript_path, "w", encoding="utf-8") as f:
+        f.write(transcription)
+
     start_button.configure(text="Start Recording", state="normal")
     recording = False
 
@@ -84,22 +94,69 @@ def copy_to_clipboard() -> None:
         app.clipboard_append(text)
 
 
+def view_transcripts() -> None:
+    """Display a list of saved transcripts for viewing and copying."""
+    files = [f for f in os.listdir(TRANSCRIPT_DIR) if f.endswith(".txt")]
+    if not files:
+        return
+
+    window = ctk.CTkToplevel(app)
+    window.title("Transcripts")
+    window.geometry("400x300")
+
+    selected = ctk.StringVar(value=files[0])
+
+    def load_file(name: str) -> None:
+        path = os.path.join(TRANSCRIPT_DIR, name)
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except OSError:
+            content = ""
+        transcript_box.configure(state="normal")
+        transcript_box.delete("1.0", "end")
+        transcript_box.insert("end", content)
+        transcript_box.configure(state="disabled")
+
+    option_menu = ctk.CTkOptionMenu(
+        window, values=files, variable=selected, command=load_file, takefocus=True
+    )
+    option_menu.pack(pady=5)
+
+    transcript_box = ctk.CTkTextbox(window, width=350, height=150, state="disabled", takefocus=True)
+    transcript_box.pack(pady=10)
+
+    copy_btn = ctk.CTkButton(
+        window, text="Copy", command=lambda: app.clipboard_append(transcript_box.get("1.0", "end").strip()), takefocus=True
+    )
+    copy_btn.pack(pady=5)
+
+    window.after(100, lambda: load_file(files[0]))
+    option_menu.focus_set()
+
+
 # Create main application window
 app = ctk.CTk()
 app.title("ClearSay")
 app.geometry("400x300")
 
 # Transcribed text display
-text_box = ctk.CTkTextbox(app, width=350, height=150, state="disabled")
+text_box = ctk.CTkTextbox(app, width=350, height=150, state="disabled", takefocus=True)
 text_box.pack(pady=20)
 
 # Recording control button
-start_button = ctk.CTkButton(app, text="Start Recording", command=toggle_recording)
+start_button = ctk.CTkButton(app, text="Start Recording", command=toggle_recording, takefocus=True)
 start_button.pack(pady=10)
+# Set initial focus so keyboard navigation begins on the first button
+start_button.focus_set()
 
 # Copy to clipboard button
-copy_button = ctk.CTkButton(app, text="Copy Transcript", command=copy_to_clipboard)
+copy_button = ctk.CTkButton(app, text="Copy Transcript", command=copy_to_clipboard, takefocus=True)
 copy_button.pack(pady=5)
+
+# View transcripts button
+view_button = ctk.CTkButton(app, text="View Transcripts", command=view_transcripts, takefocus=True)
+view_button.pack(pady=5)
 
 if __name__ == "__main__":
     app.mainloop()
