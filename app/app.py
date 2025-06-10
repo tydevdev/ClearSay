@@ -69,8 +69,7 @@ def process_transcription(file_path: str) -> None:
     global recording
     transcription = run_model(file_path)
     text_box.configure(state="normal")
-    text_box.delete("1.0", "end")
-    text_box.insert("end", transcription)
+    text_box.insert("end", "\n" + transcription)
     text_box.configure(state="disabled")
     start_button.configure(text="Start Recording", state="normal")
     recording = False
@@ -82,6 +81,13 @@ def copy_to_clipboard() -> None:
     if text:
         app.clipboard_clear()
         app.clipboard_append(text)
+
+
+def clear_transcript() -> None:
+    """Remove all text from the transcript display."""
+    text_box.configure(state="normal")
+    text_box.delete("1.0", "end")
+    text_box.configure(state="disabled")
 
 
 # Create main application window
@@ -100,6 +106,10 @@ start_button.pack(pady=10)
 # Copy to clipboard button
 copy_button = ctk.CTkButton(app, text="Copy Transcript", command=copy_to_clipboard)
 copy_button.pack(pady=5)
+
+# Clear transcript button
+clear_button = ctk.CTkButton(app, text="Clear Transcript", command=clear_transcript)
+clear_button.pack(pady=5)
 
 if __name__ == "__main__":
     app.mainloop()
