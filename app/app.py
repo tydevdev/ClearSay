@@ -61,15 +61,19 @@ def toggle_recording():
                 wf.setframerate(44100)
                 wf.writeframes(audio.tobytes())
 
-            # Transcribe the saved recording and display the result
-            transcription = run_model(file_path)
-            text_box.configure(state="normal")
-            text_box.delete("1.0", "end")
-            text_box.insert("end", transcription)
-            text_box.configure(state="disabled")
+            app.after(100, lambda: process_transcription(file_path))
 
-        start_button.configure(text="Start Recording", state="normal")
-        recording = False
+
+def process_transcription(file_path: str) -> None:
+    """Run the transcription model and update the UI."""
+    global recording
+    transcription = run_model(file_path)
+    text_box.configure(state="normal")
+    text_box.delete("1.0", "end")
+    text_box.insert("end", transcription)
+    text_box.configure(state="disabled")
+    start_button.configure(text="Start Recording", state="normal")
+    recording = False
 
 
 # Create main application window
