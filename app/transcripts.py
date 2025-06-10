@@ -20,6 +20,7 @@ class TranscriptManager:
             self.current_path = os.path.join(
                 TRANSCRIPT_DIR, f"transcript_{timestamp}.txt"
             )
+        os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
             with open(self.current_path, "w", encoding="utf-8") as f:
                 f.write(text + "\n")
