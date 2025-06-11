@@ -14,6 +14,8 @@ except Exception as exc:  # pragma: no cover - startup check
 from recorder import Recorder
 from model import run_model
 from constants import RECORDING_DIR, TRANSCRIPT_DIR
+from datetime import datetime
+from docx import Document
 from buffer_manager import TranscriptBuffer
 
 logging.basicConfig(level=logging.INFO)
@@ -98,6 +100,26 @@ async def get_transcript(name: str):
         raise HTTPException(status_code=404, detail="File not found")
     with open(path, "r", encoding="utf-8") as f:
         return {"content": f.read()}
+
+
+@app.post("/export-docx")
+async def export_docx(request: Request):
+    """Export provided text to a DOCX file in ``TRANSCRIPT_DIR``."""
+    data = await request.json()
+    text = (data.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+
+    os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    path = os.path.join(TRANSCRIPT_DIR, f"EXPORT_{timestamp}.docx")
+
+    doc = Document()
+    for para in text.split("\n"):
+        doc.add_paragraph(para)
+    doc.save(path)
+
+    return {"path": path}
 
 
 def main() -> None:

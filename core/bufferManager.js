@@ -68,6 +68,13 @@ class BufferManager extends EventEmitter {
   getFull() {
     return this.parts.join('\n\n');
   }
+
+  reset() {
+    this.parts = [];
+    this.baseTimestamp = null;
+    this.counter = 1;
+    this.emit('buffer-updated', '');
+  }
 }
 
 module.exports = new BufferManager();
