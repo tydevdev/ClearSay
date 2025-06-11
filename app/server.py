@@ -11,11 +11,32 @@ try:
 except Exception as exc:  # pragma: no cover - startup check
     raise SystemExit(f"Couldn't import fastapi: {exc}") from exc
 
-from recorder import Recorder
-from model import run_model
-from constants import RECORDING_DIR, TRANSCRIPT_DIR
+try:
+    from recorder import Recorder
+except Exception as exc:  # pragma: no cover - optional dep
+    Recorder = None  # type: ignore
+    logging.error("Failed to import Recorder: %s", exc)
+
+try:
+    from model import run_model
+except Exception as exc:  # pragma: no cover - optional dep
+    run_model = None  # type: ignore
+    logging.error("Failed to import run_model: %s", exc)
+
+try:
+    from constants import RECORDING_DIR, TRANSCRIPT_DIR
+except Exception as exc:  # pragma: no cover - should always exist
+    logging.error("Failed to import constants: %s", exc)
+    RECORDING_DIR = "recorded_audio"  # type: ignore
+    TRANSCRIPT_DIR = "transcripts"  # type: ignore
+
 from datetime import datetime
-from buffer_manager import TranscriptBuffer
+
+try:
+    from buffer_manager import TranscriptBuffer
+except Exception as exc:  # pragma: no cover - optional
+    TranscriptBuffer = None  # type: ignore
+    logging.error("Failed to import TranscriptBuffer: %s", exc)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,8 +51,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-recorder = Recorder()
-transcript_buffer = TranscriptBuffer()
+if Recorder is not None:
+    try:
+        recorder = Recorder()
+    except Exception as exc:  # pragma: no cover - init failure
+        logger.error("Failed to initialize Recorder: %s", exc)
+        recorder = None
+else:
+    recorder = None
+
+if TranscriptBuffer is not None:
+    try:
+        transcript_buffer = TranscriptBuffer()
+    except Exception as exc:  # pragma: no cover - init failure
+        logger.error("Failed to initialize TranscriptBuffer: %s", exc)
+        transcript_buffer = None
+else:
+    transcript_buffer = None
 
 
 @app.post("/record")
@@ -39,12 +75,19 @@ async def record(request: Request):
     """Start or stop recording based on the ``action`` field."""
     data = await request.json()
     action = data.get("action")
+    if recorder is None:
+        logger.error("Recorder not initialized")
+        raise HTTPException(status_code=503, detail="Recording unavailable")
     if action == "start":
         logger.info("Starting recording")
         recorder.start()
         return {"status": "recording"}
     if action == "stop":
-        path = recorder.stop()
+        try:
+            path = recorder.stop()
+        except Exception as exc:  # pragma: no cover - stop may fail
+            logger.error("Failed to stop recording: %s", exc)
+            raise HTTPException(status_code=500, detail="Stop recording failed")
         logger.info("Stopped recording, saved to %s", path)
         if path is None:
             raise HTTPException(status_code=400, detail="No audio recorded")
@@ -66,6 +109,9 @@ async def transcribe(file: str):
     if not os.path.exists(path):
         logger.warning("File not found: %s", path)
         raise HTTPException(status_code=404, detail="File not found")
+    if run_model is None:
+        logger.error("run_model not available")
+        raise HTTPException(status_code=503, detail="Transcription unavailable")
     try:
         text = run_model(path)
     except Exception as exc:  # broad but ensures we never crash
@@ -85,6 +131,9 @@ async def transcribe_upload(file: UploadFile = File(...)):
     with open(save_path, "wb") as f:
         f.write(await file.read())
     logger.info("Transcribe uploaded file %s", save_path)
+    if run_model is None:
+        logger.error("run_model not available")
+        raise HTTPException(status_code=503, detail="Transcription unavailable")
     try:
         text = run_model(save_path)
     except Exception as exc:  # broad but ensures we never crash
@@ -143,16 +192,19 @@ def main() -> None:
         import uvicorn
     except Exception as exc:  # pragma: no cover - startup check
         logger.error("Couldn't import uvicorn: %s", exc)
-        raise SystemExit(1) from exc
+        print("Uvicorn is required to run the server.")
+        return
 
     try:
         # Run the FastAPI ``app`` directly to avoid import path issues when
         # this module is executed with ``python -m app.server``.
         uvicorn.run(app, host="127.0.0.1", port=8000)
     except Exception as exc:
-        logger.error("Failed to launch Uvicorn: %s", exc)
-        raise
+        logger.exception("Failed to launch Uvicorn")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:  # pragma: no cover - catch all
+        logger.exception("Server crashed during startup: %s", exc)
