@@ -7,10 +7,11 @@ let mainWindow;
 let serverProcess;
 const SERVER_PORT = 8000;
 const ROOT_DIR = path.join(__dirname, '..');
+const PYTHON_BIN = process.platform === 'win32' ? 'python' : 'python3';
 
 function startServer() {
   return new Promise((resolve, reject) => {
-    serverProcess = spawn('python', ['-m', 'app.server'], { cwd: ROOT_DIR });
+    serverProcess = spawn(PYTHON_BIN, ['-m', 'app.server'], { cwd: ROOT_DIR });
     serverProcess.on('error', reject);
 
     const maxAttempts = 20;
