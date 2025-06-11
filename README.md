@@ -18,6 +18,9 @@ Install server requirements (no UI packages) with:
 pip install -r requirements-server.txt
 ```
 
+The ``check-server.sh`` script creates a ``venv`` and installs only these
+packages before running a quick health check. It requires no GUI libraries.
+
 To install the UI dependencies later, place the wheel files in ``wheels/`` and
 run ``./install-ui.sh`` or execute the command below:
 
