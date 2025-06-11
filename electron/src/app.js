@@ -19,6 +19,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let recording = false;
     let processing = false;
+    const transcriptBuffer = [];
 
     copyBtn.addEventListener('click', () => {
         const text = transcriptEl.innerText.trim();
@@ -67,7 +68,8 @@ window.addEventListener('DOMContentLoaded', () => {
                     const tRes = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(data.file)}`);
                     const tData = await tRes.json();
                     if (tData && tData.transcript !== undefined) {
-                        transcriptEl.innerHTML = `<p>${tData.transcript}</p>`;
+                        transcriptBuffer.push(tData.transcript);
+                        transcriptEl.innerHTML = transcriptBuffer.map(t => `<p>${t}</p>`).join('');
                     }
                 }
             } catch (err) {
