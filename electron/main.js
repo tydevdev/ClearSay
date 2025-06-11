@@ -1,6 +1,46 @@
-const { app, BrowserWindow, globalShortcut } = require('electron');
+const { app, BrowserWindow, globalShortcut, dialog } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
+const http = require('http');
+
 let mainWindow;
+let serverProcess;
+const SERVER_PORT = 8000;
+const ROOT_DIR = path.join(__dirname, '..');
+
+function startServer() {
+  return new Promise((resolve, reject) => {
+    serverProcess = spawn('python', ['-m', 'app.server'], { cwd: ROOT_DIR });
+    serverProcess.on('error', reject);
+
+    const maxAttempts = 20;
+    let attempts = 0;
+    const timer = setInterval(() => {
+      http.get(`http://127.0.0.1:${SERVER_PORT}/health`, res => {
+        if (res.statusCode === 200) {
+          clearInterval(timer);
+          resolve();
+        }
+        res.resume();
+      }).on('error', () => {
+        // wait until server starts
+      });
+
+      attempts += 1;
+      if (attempts >= maxAttempts) {
+        clearInterval(timer);
+        reject(new Error('Server start timeout'));
+      }
+    }, 500);
+  });
+}
+
+function stopServer() {
+  if (serverProcess) {
+    serverProcess.kill();
+    serverProcess = null;
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -15,7 +55,15 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, 'src', 'index.html'));
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  try {
+    await startServer();
+  } catch (err) {
+    dialog.showErrorBox('Server Error', 'Failed to start Python server.');
+    app.quit();
+    return;
+  }
+
   createWindow();
 
   globalShortcut.register('Alt+Space', () => {
@@ -35,4 +83,5 @@ app.whenReady().then(() => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  stopServer();
 });

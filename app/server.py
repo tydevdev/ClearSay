@@ -38,6 +38,12 @@ async def record(request: Request):
     raise HTTPException(status_code=400, detail="Invalid action")
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    """Simple health check endpoint."""
+    return {"status": "ok"}
+
+
 @app.get("/transcribe")
 async def transcribe(file: str):
     """Transcribe ``file`` from :data:`RECORDING_DIR`."""
