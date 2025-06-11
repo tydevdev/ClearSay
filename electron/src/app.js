@@ -18,6 +18,7 @@ window.addEventListener('DOMContentLoaded', () => {
     `;
 
     let recording = false;
+    let processing = false;
 
     copyBtn.addEventListener('click', () => {
         const text = transcriptEl.innerText.trim();
@@ -27,6 +28,10 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     recordBtn.addEventListener('click', async () => {
+        if (processing) {
+            return;
+        }
+
         if (!recording) {
             // Start recording
             try {
@@ -50,6 +55,14 @@ window.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ action: 'stop' })
                 });
                 const data = await res.json();
+
+                processing = true;
+                recording = false;
+                recordBtnText.textContent = 'Processing...';
+                recordBtnIcon.innerHTML = '';
+                recordBtn.disabled = true;
+                await new Promise(r => setTimeout(r, 50));
+
                 if (data && data.file) {
                     const tRes = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(data.file)}`);
                     const tData = await tRes.json();
@@ -60,7 +73,8 @@ window.addEventListener('DOMContentLoaded', () => {
             } catch (err) {
                 console.error('Failed to stop recording', err);
             } finally {
-                recording = false;
+                processing = false;
+                recordBtn.disabled = false;
                 recordBtnText.textContent = 'Start Recording';
                 recordBtnIcon.innerHTML = micIcon;
             }
