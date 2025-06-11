@@ -8,7 +8,8 @@ fi
 # Activate venv
 source venv/bin/activate
 
-pip install -q -r requirements.txt
+# Install server dependencies only
+pip install -q -r requirements-server.txt
 
 python -c "import fastapi; print('fastapi', fastapi.__version__)"
 

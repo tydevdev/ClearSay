@@ -7,10 +7,22 @@ ClearSay is a simple desktop application to help children like William practice 
 - Python 3.8+
 - [customtkinter](https://github.com/TomSchimansky/CustomTkinter)
 
-Install dependencies with:
+Two ``requirements`` files split the dependencies:
+
+* ``requirements-server.txt`` – packages needed to run the FastAPI server
+* ``requirements-ui.txt`` – UI dependencies such as ``customtkinter``
+
+Install server requirements (no UI packages) with:
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-server.txt
+```
+
+To install the UI dependencies later, place the wheel files in ``wheels/`` and
+run ``./install-ui.sh`` or execute the command below:
+
+```bash
+pip install --no-index --find-links=./wheels -r requirements-ui.txt
 ```
 
 ## Running
@@ -26,7 +38,8 @@ The app now uses a single light theme with soft blue accents for readability.
 ### API server
 
 A lightweight FastAPI server provides recording and transcription endpoints for
-the Electron UI. Launch it with:
+the Electron UI. Install its dependencies and launch it with ``./check-server.sh``
+or run it manually:
 
 ```bash
 python -m app.server
