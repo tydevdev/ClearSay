@@ -5,7 +5,11 @@ from datetime import datetime
 from typing import Optional
 
 import numpy as np
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except Exception as exc:  # pragma: no cover - optional dep
+    sd = None  # type: ignore
+    print(f"sounddevice not available: {exc}")
 
 from constants import RECORDING_DIR, SAMPLE_RATE, TIMESTAMP_FORMAT
 
@@ -15,7 +19,7 @@ class Recorder:
 
     def __init__(self) -> None:
         self.audio_queue: queue.Queue[np.ndarray] = queue.Queue()
-        self.stream: Optional[sd.InputStream] = None
+        self.stream: Optional[object] = None
         self.recording = False
         self.last_timestamp: Optional[str] = None
 
@@ -24,10 +28,19 @@ class Recorder:
             print(status)
         self.audio_queue.put(indata.copy())
 
-    def start(self) -> None:
-        """Begin recording from the microphone."""
+    def start(self) -> bool:
+        """Begin recording from the microphone.
+
+        Returns
+        -------
+        bool
+            ``True`` if recording successfully started, else ``False``.
+        """
+        if sd is None:
+            print("Recording unavailable: sounddevice not installed")
+            return False
         if self.recording:
-            return
+            return True
         # create a new queue to avoid thread-safety issues
         self.audio_queue = queue.Queue()
         try:
@@ -40,8 +53,9 @@ class Recorder:
         except Exception as exc:
             print(f"Failed to start recording: {exc}")
             self.stream = None
-            return
+            return False
         self.recording = True
+        return True
 
     def stop(self) -> Optional[str]:
         """Stop recording and save the audio to disk.
@@ -51,7 +65,8 @@ class Recorder:
         Optional[str]
             Path to the saved audio file or ``None`` if no audio was recorded.
         """
-        if not self.recording:
+        if sd is None or not self.recording:
+            print("Stop called but no recording in progress")
             return None
         if self.stream is not None:
             try:

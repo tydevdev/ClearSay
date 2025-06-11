@@ -7,13 +7,16 @@ let mainWindow;
 let serverProcess;
 const SERVER_PORT = 8000;
 const ROOT_DIR = path.join(__dirname, '..');
+const PYTHON_BIN = process.env.VIRTUAL_ENV
+  ? path.join(process.env.VIRTUAL_ENV, 'bin', process.platform === 'win32' ? 'python.exe' : 'python')
+  : (process.platform === 'win32' ? 'python' : 'python3');
 
 function startServer() {
   return new Promise((resolve, reject) => {
-    serverProcess = spawn('python', ['-m', 'app.server'], { cwd: ROOT_DIR });
+    serverProcess = spawn(PYTHON_BIN, ['-m', 'app.server'], { cwd: ROOT_DIR });
     serverProcess.on('error', reject);
 
-    const maxAttempts = 20;
+    const maxAttempts = 40; // allow more time for heavy dependencies
     let attempts = 0;
     const timer = setInterval(() => {
       http.get(`http://127.0.0.1:${SERVER_PORT}/health`, res => {
