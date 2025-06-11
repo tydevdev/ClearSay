@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-python-docx
 sounddevice
 torch
 whisper

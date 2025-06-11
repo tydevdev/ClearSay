@@ -27,7 +27,7 @@ export default function ExportModal({ open, onClose }) {
     if (text) navigator.clipboard.writeText(text);
   };
 
-  const saveDocx = () => {
+  const saveFile = () => {
     const text = bufferManager.getFull();
     fetch('http://localhost:8000/export-docx', {
       method: 'POST',
@@ -50,7 +50,7 @@ export default function ExportModal({ open, onClose }) {
     <div className="export-overlay" onClick={handleOverlay}>
       <div className="export-modal">
         <button className="tile" onClick={copyText}>Copy</button>
-        <button className="tile" onClick={saveDocx}>Save as .docx</button>
+        <button className="tile" onClick={saveFile}>Save to file</button>
         <button className="tile" onClick={newDoc}>New Document</button>
       </div>
     </div>

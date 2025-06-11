@@ -52,6 +52,12 @@ python -m app.server
 
 The server binds only to `localhost` on port `8000`.
 
+### Exporting transcripts
+
+The optional DOCX export previously depended on `python-docx`. To simplify
+setup, the `/export-docx` endpoint now saves plain text files instead. Any text
+sent to this endpoint will be written to `transcripts/EXPORT_YYYY_MM_DD_HH_MM_SS.txt`.
+
 ## Electron wrapper
 
 A minimal Electron app lives in `electron/` to package ClearSay for the desktop. Install Node dependencies and launch it in development mode with:
