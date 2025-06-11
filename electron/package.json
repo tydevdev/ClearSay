@@ -1,0 +1,16 @@
+{
+  "name": "clearsay-electron",
+  "version": "1.0.0",
+  "description": "Electron wrapper for ClearSay",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "dependencies": {
+    "electron": "^30.0.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.14.1"
+  }
+}
