@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import logging
+import tempfile
+import shutil
 
 try:
     import fastapi
-    from fastapi import FastAPI, HTTPException, Request
+    from fastapi import FastAPI, HTTPException, Request, UploadFile, File
     from fastapi.middleware.cors import CORSMiddleware
     print("fastapi", fastapi.__version__)
 except Exception as exc:  # pragma: no cover - startup check
@@ -72,6 +74,23 @@ async def transcribe(file: str):
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
 
     transcript_buffer.append(text, path)
+    return {"transcript": text}
+
+
+@app.post("/transcribe")
+async def transcribe_upload(file: UploadFile = File(...)):
+    """Transcribe an uploaded audio file."""
+    suffix = os.path.splitext(file.filename or "")[1] or ".webm"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+    try:
+        text = run_model(tmp_path)
+    except Exception as exc:  # pragma: no cover - ensure server stays up
+        logger.exception("run_model failed for uploaded file %s", tmp_path)
+        raise HTTPException(status_code=500, detail="Transcription failed") from exc
+    transcript_buffer.append(text, tmp_path)
+    os.unlink(tmp_path)
     return {"transcript": text}
 
 
