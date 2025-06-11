@@ -1,6 +1,6 @@
 # ClearSay
 
-ClearSay is a simple desktop application to help children like William practice speech. Click **Start Recording** and the app records from your microphone before transcribing it with a fine-tuned Whisper model.
+ClearSay is a simple desktop application to help children like William practice speech. Click **Start Recording** and the app records from your microphone before transcribing it. If the optional Whisper dependencies are missing the server will simply return placeholder text.
 
 Transcripts now accumulate in a single buffer so you can pause and resume dictation. Each recording is saved in `recorded_audio/` as `RECORDING_YYYY_MM_DD_HH_MM.wav`. The matching transcript is written to `transcripts/` with the identical timestamp, e.g. `TRANSCRIPT_YYYY_MM_DD_HH_MM.txt`.
 
@@ -11,7 +11,7 @@ Transcripts now accumulate in a single buffer so you can pause and resume dictat
 
 Two ``requirements`` files split the dependencies:
 
-* ``requirements-server.txt`` – packages needed to run the FastAPI server
+* ``requirements-server.txt`` – minimal packages for the FastAPI server
 * ``requirements-ui.txt`` – UI dependencies such as ``customtkinter``
 
 Install server requirements (no UI packages) with:
@@ -21,7 +21,9 @@ pip install -r requirements-server.txt
 ```
 
 The ``check-server.sh`` script creates a ``venv`` and installs only these
-packages before running a quick health check. It requires no GUI libraries.
+packages before running a quick health check. Recording and transcription use
+``sounddevice`` and ``whisper`` which are optional. When they are missing the
+server simply returns placeholder transcripts.
 
 To install the UI dependencies later, place the wheel files in ``wheels/`` and
 run ``./install-ui.sh`` or execute the command below:

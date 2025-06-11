@@ -5,7 +5,11 @@ from datetime import datetime
 from typing import Optional
 
 import numpy as np
-import sounddevice as sd
+try:
+    import sounddevice as sd
+except Exception as exc:  # pragma: no cover - optional dep
+    sd = None  # type: ignore
+    print(f"sounddevice not available: {exc}")
 
 from constants import RECORDING_DIR, SAMPLE_RATE, TIMESTAMP_FORMAT
 
@@ -15,7 +19,7 @@ class Recorder:
 
     def __init__(self) -> None:
         self.audio_queue: queue.Queue[np.ndarray] = queue.Queue()
-        self.stream: Optional[sd.InputStream] = None
+        self.stream: Optional[object] = None
         self.recording = False
         self.last_timestamp: Optional[str] = None
 
@@ -26,6 +30,9 @@ class Recorder:
 
     def start(self) -> None:
         """Begin recording from the microphone."""
+        if sd is None:
+            print("Recording unavailable: sounddevice not installed")
+            return
         if self.recording:
             return
         # create a new queue to avoid thread-safety issues
@@ -51,7 +58,7 @@ class Recorder:
         Optional[str]
             Path to the saved audio file or ``None`` if no audio was recorded.
         """
-        if not self.recording:
+        if sd is None or not self.recording:
             return None
         if self.stream is not None:
             try:
