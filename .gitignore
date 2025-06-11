@@ -19,3 +19,20 @@ __pycache__/
 # Generated transcripts and recordings
 transcripts/
 recorded_audio/
+
+
+# Electron build & deps
+electron/node_modules/
+electron/dist/
+electron/build/
+
+# npm logs
+npm-debug.log*
+yarn-error.log*
+
+# IDE settings
+.vscode/
+.idea/
+
+# Environment files
+.env

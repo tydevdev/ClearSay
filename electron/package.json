@@ -7,11 +7,9 @@
     "start": "electron .",
     "dist": "electron-builder"
   },
-  "dependencies": {
-    "electron": "^30.0.0"
-  },
   "devDependencies": {
-    "electron-builder": "^24.14.1"
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12"
   },
   "build": {
     "appId": "com.clearsay.app",
@@ -24,15 +22,21 @@
       {
         "from": "../dist",
         "to": "server",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "artifactName": "ClearSay.dmg"
     },
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "artifactName": "ClearSay.exe"
     }
   }
