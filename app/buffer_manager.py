@@ -25,9 +25,10 @@ class TranscriptBuffer:
                 TRANSCRIPT_DIR, f"TRANSCRIPT_{self.base_timestamp}.txt"
             )
         if os.path.exists(audio_path):
+            ext = os.path.splitext(audio_path)[1] or ".wav"
             dest = os.path.join(
                 TRANSCRIPT_DIR,
-                f"RECORDING_{self.base_timestamp}_{self.counter:03d}.wav",
+                f"RECORDING_{self.base_timestamp}_{self.counter:03d}{ext}",
             )
             try:
                 shutil.copy2(audio_path, dest)
