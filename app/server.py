@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from recorder import Recorder
 from model import run_model
 from constants import RECORDING_DIR
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -28,10 +32,12 @@ async def record(request: Request):
     data = await request.json()
     action = data.get("action")
     if action == "start":
+        logger.info("Starting recording")
         recorder.start()
         return {"status": "recording"}
     if action == "stop":
         path = recorder.stop()
+        logger.info("Stopped recording, saved to %s", path)
         if path is None:
             raise HTTPException(status_code=400, detail="No audio recorded")
         return {"file": os.path.basename(path)}
@@ -47,10 +53,16 @@ async def health() -> dict[str, str]:
 @app.get("/transcribe")
 async def transcribe(file: str):
     """Transcribe ``file`` from :data:`RECORDING_DIR`."""
-    path = os.path.join(RECORDING_DIR, file)
+    path = os.path.abspath(os.path.join(RECORDING_DIR, file))
+    logger.info("Transcribe request for %s", path)
     if not os.path.exists(path):
+        logger.warning("File not found: %s", path)
         raise HTTPException(status_code=404, detail="File not found")
-    text = run_model(path)
+    try:
+        text = run_model(path)
+    except Exception as exc:  # broad but ensures we never crash
+        logger.exception("run_model failed for %s", path)
+        raise HTTPException(status_code=500, detail="Transcription failed") from exc
     return {"transcript": text}
 
 
