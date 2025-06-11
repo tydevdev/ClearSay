@@ -3,6 +3,8 @@
 from typing import Any
 import os
 
+from constants import ROOT_DIR
+
 import torch
 import whisper
 
@@ -16,7 +18,7 @@ def _load_model() -> Any:
         return _MODEL
 
     base_model: Any = whisper.load_model("small.en")
-    weights_path = os.path.join("models", "fine_tuned_whisper_small_en_v4.pth")
+    weights_path = os.path.join(ROOT_DIR, "models", "fine_tuned_whisper_small_en_v4.pth")
     if not os.path.exists(weights_path):
         raise FileNotFoundError(weights_path)
     state_dict = torch.load(weights_path, map_location="cpu")
