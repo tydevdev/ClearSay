@@ -87,18 +87,22 @@ window.addEventListener('DOMContentLoaded', () => {
                 method: 'POST',
                 body: formData
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.detail || 'Transcription failed');
+            }
             const text = data.text || data.transcript;
             if (text !== undefined) {
                 appendTranscript(text);
                 document.dispatchEvent(new CustomEvent('transcript-ready', { detail: text }));
                 setState(States.IDLE);
             } else {
-                setState(States.ERROR);
+                throw new Error('No transcript returned');
             }
         } catch (err) {
             console.error('Failed to transcribe', err);
             setState(States.ERROR);
+            setTimeout(() => setState(States.IDLE), 1500);
         }
     }
 

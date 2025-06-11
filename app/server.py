@@ -5,7 +5,7 @@ import logging
 
 try:
     import fastapi
-    from fastapi import FastAPI, HTTPException, Request
+    from fastapi import FastAPI, HTTPException, Request, UploadFile, File
     from fastapi.middleware.cors import CORSMiddleware
     print("fastapi", fastapi.__version__)
 except Exception as exc:  # pragma: no cover - startup check
@@ -15,7 +15,6 @@ from recorder import Recorder
 from model import run_model
 from constants import RECORDING_DIR, TRANSCRIPT_DIR
 from datetime import datetime
-from docx import Document
 from buffer_manager import TranscriptBuffer
 
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +76,25 @@ async def transcribe(file: str):
     return {"transcript": text}
 
 
+@app.post("/transcribe")
+async def transcribe_upload(file: UploadFile = File(...)):
+    """Accept an uploaded audio file and return its transcript."""
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+    ext = os.path.splitext(file.filename or "")[1] or ".webm"
+    save_path = os.path.join(RECORDING_DIR, f"UPLOAD_{timestamp}{ext}")
+    with open(save_path, "wb") as f:
+        f.write(await file.read())
+    logger.info("Transcribe uploaded file %s", save_path)
+    try:
+        text = run_model(save_path)
+    except Exception as exc:  # broad but ensures we never crash
+        logger.exception("run_model failed for %s", save_path)
+        raise HTTPException(status_code=500, detail="Transcription failed") from exc
+
+    transcript_buffer.append(text, save_path)
+    return {"transcript": text}
+
+
 @app.get("/list-transcripts")
 async def list_transcripts():
     """Return transcript file names with modification times."""
@@ -114,6 +132,11 @@ async def export_docx(request: Request):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     path = os.path.join(TRANSCRIPT_DIR, f"EXPORT_{timestamp}.docx")
 
+    try:
+        from docx import Document
+    except Exception as exc:  # pragma: no cover - missing optional dep
+        logger.error("python-docx not installed: %s", exc)
+        raise HTTPException(status_code=500, detail="DOCX export unavailable")
     doc = Document()
     for para in text.split("\n"):
         doc.add_paragraph(para)
