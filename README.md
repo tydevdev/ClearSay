@@ -22,3 +22,15 @@ python app.py
 ```
 
 The app now uses a single light theme with soft blue accents for readability.
+
+## Electron wrapper
+
+A minimal Electron app lives in `electron/` to package ClearSay for the desktop. Install Node dependencies and launch it in development mode with:
+
+```bash
+cd electron
+npm install
+npm run start
+```
+
+`Option + Space` toggles focus of the window when running on macOS.
