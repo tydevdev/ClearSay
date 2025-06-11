@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+sounddevice
+openai-whisper
+torch
