@@ -3,8 +3,13 @@ from __future__ import annotations
 import os
 import logging
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
+try:
+    import fastapi
+    from fastapi import FastAPI, HTTPException, Request
+    from fastapi.middleware.cors import CORSMiddleware
+    print("fastapi", fastapi.__version__)
+except Exception as exc:  # pragma: no cover - startup check
+    raise SystemExit(f"Couldn't import fastapi: {exc}") from exc
 
 from recorder import Recorder
 from model import run_model
@@ -67,9 +72,17 @@ async def transcribe(file: str):
 
 
 def main() -> None:
-    import uvicorn
+    try:
+        import uvicorn
+    except Exception as exc:  # pragma: no cover - startup check
+        logger.error("Couldn't import uvicorn: %s", exc)
+        raise SystemExit(1) from exc
 
-    uvicorn.run("server:app", host="127.0.0.1", port=8000)
+    try:
+        uvicorn.run("server:app", host="127.0.0.1", port=8000)
+    except Exception as exc:
+        logger.error("Failed to launch Uvicorn: %s", exc)
+        raise
 
 
 if __name__ == "__main__":
