@@ -13,7 +13,7 @@ except Exception as exc:  # pragma: no cover - startup check
 
 from recorder import Recorder
 from model import run_model
-from constants import RECORDING_DIR
+from constants import RECORDING_DIR, TRANSCRIPT_DIR
 from buffer_manager import TranscriptBuffer
 
 logging.basicConfig(level=logging.INFO)
@@ -73,6 +73,31 @@ async def transcribe(file: str):
 
     transcript_buffer.append(text, path)
     return {"transcript": text}
+
+
+@app.get("/list-transcripts")
+async def list_transcripts():
+    """Return transcript file names with modification times."""
+    files = []
+    if os.path.exists(TRANSCRIPT_DIR):
+        for name in os.listdir(TRANSCRIPT_DIR):
+            if name.endswith(".txt"):
+                path = os.path.join(TRANSCRIPT_DIR, name)
+                files.append({"name": name, "mtime": os.path.getmtime(path)})
+    files.sort(key=lambda x: x["mtime"], reverse=True)
+    return {"files": files}
+
+
+@app.get("/get-transcript")
+async def get_transcript(name: str):
+    """Return the contents of ``name`` from :data:`TRANSCRIPT_DIR`."""
+    path = os.path.abspath(os.path.join(TRANSCRIPT_DIR, name))
+    if not path.startswith(os.path.abspath(TRANSCRIPT_DIR)):
+        raise HTTPException(status_code=400, detail="Invalid file")
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="File not found")
+    with open(path, "r", encoding="utf-8") as f:
+        return {"content": f.read()}
 
 
 def main() -> None:
