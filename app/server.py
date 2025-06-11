@@ -15,7 +15,6 @@ from recorder import Recorder
 from model import run_model
 from constants import RECORDING_DIR, TRANSCRIPT_DIR
 from datetime import datetime
-from docx import Document
 from buffer_manager import TranscriptBuffer
 
 logging.basicConfig(level=logging.INFO)
@@ -133,6 +132,11 @@ async def export_docx(request: Request):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     path = os.path.join(TRANSCRIPT_DIR, f"EXPORT_{timestamp}.docx")
 
+    try:
+        from docx import Document
+    except Exception as exc:  # pragma: no cover - missing optional dep
+        logger.error("python-docx not installed: %s", exc)
+        raise HTTPException(status_code=500, detail="DOCX export unavailable")
     doc = Document()
     for para in text.split("\n"):
         doc.add_paragraph(para)
