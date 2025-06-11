@@ -4,6 +4,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const labelEl = recordBtn.querySelector('.label');
     const iconEl = recordBtn.querySelector('svg');
     const transcriptEl = document.getElementById('transcript');
+    const doneBtn = document.getElementById('done-btn');
+    const exportModal = document.getElementById('export-modal');
+    const modalOverlay = exportModal.querySelector('.overlay');
+    const copyTile = exportModal.querySelector('[data-action="copy"]');
+    const docxTile = exportModal.querySelector('[data-action="docx"]');
+    const newTile = exportModal.querySelector('[data-action="new"]');
 
     const API_PORT = 8000;
 
@@ -109,6 +115,30 @@ window.addEventListener('DOMContentLoaded', () => {
         transcriptEl.scrollTop = transcriptEl.scrollHeight;
     }
 
+    function getFullTranscript() {
+        return transcriptEl.innerText.trim();
+    }
+
+    function showToast(msg) {
+        const t = document.createElement('div');
+        t.className = 'export-toast';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        requestAnimationFrame(() => t.classList.add('show'));
+        setTimeout(() => {
+            t.classList.remove('show');
+            setTimeout(() => t.remove(), 300);
+        }, 2000);
+    }
+
+    function openModal() {
+        exportModal.classList.add('show');
+    }
+
+    function closeModal() {
+        exportModal.classList.remove('show');
+    }
+
     function toggleRecording() {
         if (state === States.IDLE) {
             startRecording();
@@ -122,6 +152,52 @@ window.addEventListener('DOMContentLoaded', () => {
         if (text) {
             navigator.clipboard.writeText(text);
         }
+    });
+
+    doneBtn.addEventListener('click', openModal);
+    modalOverlay.addEventListener('click', closeModal);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && exportModal.classList.contains('show')) {
+            closeModal();
+        }
+    });
+
+    copyTile.addEventListener('click', () => {
+        const text = getFullTranscript();
+        if (text) {
+            navigator.clipboard.writeText(text);
+            showToast('Copied');
+        }
+        closeModal();
+    });
+
+    docxTile.addEventListener('click', async () => {
+        const text = getFullTranscript();
+        if (!text) {
+            closeModal();
+            return;
+        }
+        try {
+            const res = await fetch(`http://localhost:${API_PORT}/export-docx`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+            if (res.ok) {
+                showToast('Saved');
+            }
+        } catch (err) {
+            console.error('Failed to export', err);
+        }
+        closeModal();
+    });
+
+    newTile.addEventListener('click', () => {
+        if (confirm('Clear current transcript?')) {
+            transcriptEl.innerHTML = '';
+        }
+        closeModal();
     });
 
     recordBtn.addEventListener('click', toggleRecording);

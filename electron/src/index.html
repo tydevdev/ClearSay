@@ -6,6 +6,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700;900&family=Noto+Sans:wght@400;500;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="export-modal.css">
 </head>
 <body>
     <div class="container">
@@ -35,8 +36,18 @@
                 <p>Your transcribed text will appear here...</p>
             </div>
         </div>
-        
+        <button id="done-btn" class="done-btn">Done</button>
     </div>
+
+    <div id="export-modal" class="export-modal">
+        <div class="overlay"></div>
+        <div class="modal">
+            <div class="export-tile" data-action="copy">Copy</div>
+            <div class="export-tile" data-action="docx">Save as .docx</div>
+            <div class="export-tile" data-action="new">New Document</div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

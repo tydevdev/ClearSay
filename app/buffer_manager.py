@@ -38,3 +38,14 @@ class TranscriptBuffer:
         with open(self.transcript_path, "w", encoding="utf-8") as f:
             f.write("\n\n".join(self.text_parts) + "\n")
         self.counter += 1
+
+    def get_full(self) -> str:
+        """Return the entire buffered transcript."""
+        return "\n\n".join(self.text_parts)
+
+    def reset(self) -> None:
+        """Clear the current buffer."""
+        self.base_timestamp = None
+        self.text_parts.clear()
+        self.counter = 1
+        self.transcript_path = None
