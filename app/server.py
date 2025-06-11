@@ -122,7 +122,7 @@ async def get_transcript(name: str):
 
 @app.post("/export-docx")
 async def export_docx(request: Request):
-    """Export provided text to a DOCX file in ``TRANSCRIPT_DIR``."""
+    """Save provided text to a ``.txt`` file in ``TRANSCRIPT_DIR``."""
     data = await request.json()
     text = (data.get("text") or "").strip()
     if not text:
@@ -130,17 +130,10 @@ async def export_docx(request: Request):
 
     os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    path = os.path.join(TRANSCRIPT_DIR, f"EXPORT_{timestamp}.docx")
+    path = os.path.join(TRANSCRIPT_DIR, f"EXPORT_{timestamp}.txt")
 
-    try:
-        from docx import Document
-    except Exception as exc:  # pragma: no cover - missing optional dep
-        logger.error("python-docx not installed: %s", exc)
-        raise HTTPException(status_code=500, detail="DOCX export unavailable")
-    doc = Document()
-    for para in text.split("\n"):
-        doc.add_paragraph(para)
-    doc.save(path)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
 
     return {"path": path}
 
