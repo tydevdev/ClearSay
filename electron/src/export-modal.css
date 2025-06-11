@@ -1,0 +1,63 @@
+#export-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    font-family: var(--font-family);
+}
+#export-modal.show {
+    display: flex;
+}
+#export-modal .overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+}
+#export-modal .modal {
+    position: relative;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    display: flex;
+    gap: 1rem;
+    z-index: 1;
+}
+#export-modal .export-tile {
+    width: 150px;
+    height: 150px;
+    background: var(--color-button-bg);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    color: var(--color-button-text);
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem;
+    transition: background-color 0.2s;
+}
+#export-modal .export-tile:hover {
+    background: var(--color-button-hover);
+}
+.export-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 1001;
+}
+.export-toast.show {
+    opacity: 1;
+}

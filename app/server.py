@@ -13,8 +13,9 @@ except Exception as exc:  # pragma: no cover - startup check
 
 from recorder import Recorder
 from model import run_model
-from constants import RECORDING_DIR
+from constants import RECORDING_DIR, TRANSCRIPT_DIR, TIMESTAMP_FORMAT
 from buffer_manager import TranscriptBuffer
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -73,6 +74,35 @@ async def transcribe(file: str):
 
     transcript_buffer.append(text, path)
     return {"transcript": text}
+
+
+@app.post("/export-docx")
+async def export_docx(request: Request):
+    """Export provided text to a DOCX file."""
+    data = await request.json()
+    text = data.get("text", "")
+    if not text:
+        raise HTTPException(status_code=400, detail="No text provided")
+    try:
+        from docx import Document
+    except Exception as exc:  # pragma: no cover - missing optional dep
+        logger.error("python-docx missing: %s", exc)
+        raise HTTPException(status_code=500, detail="DOCX export unavailable") from exc
+
+    doc = Document()
+    for para in text.split("\n\n"):
+        doc.add_paragraph(para)
+
+    timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
+    filename = f"TRANSCRIPT_{timestamp}.docx"
+    path = os.path.join(TRANSCRIPT_DIR, filename)
+    os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
+    try:
+        doc.save(path)
+    except Exception as exc:  # pragma: no cover - disk errors
+        logger.error("Failed to save docx: %s", exc)
+        raise HTTPException(status_code=500, detail="Failed to save file") from exc
+    return {"file": filename}
 
 
 def main() -> None:
