@@ -23,6 +23,17 @@ python app.py
 
 The app now uses a single light theme with soft blue accents for readability.
 
+### API server
+
+A lightweight FastAPI server provides recording and transcription endpoints for
+the Electron UI. Launch it with:
+
+```bash
+python -m app.server
+```
+
+The server binds only to `localhost` on port `8000`.
+
 ## Electron wrapper
 
 A minimal Electron app lives in `electron/` to package ClearSay for the desktop. Install Node dependencies and launch it in development mode with:
