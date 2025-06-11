@@ -130,7 +130,9 @@ def main() -> None:
         raise SystemExit(1) from exc
 
     try:
-        uvicorn.run("server:app", host="127.0.0.1", port=8000)
+        # Run the FastAPI ``app`` directly to avoid import path issues when
+        # this module is executed with ``python -m app.server``.
+        uvicorn.run(app, host="127.0.0.1", port=8000)
     except Exception as exc:
         logger.error("Failed to launch Uvicorn: %s", exc)
         raise
