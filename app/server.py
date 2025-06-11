@@ -14,6 +14,7 @@ except Exception as exc:  # pragma: no cover - startup check
 from recorder import Recorder
 from model import run_model
 from constants import RECORDING_DIR
+from buffer_manager import TranscriptBuffer
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ app.add_middleware(
 )
 
 recorder = Recorder()
+transcript_buffer = TranscriptBuffer()
 
 
 @app.post("/record")
@@ -68,6 +70,8 @@ async def transcribe(file: str):
     except Exception as exc:  # broad but ensures we never crash
         logger.exception("run_model failed for %s", path)
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
+
+    transcript_buffer.append(text, path)
     return {"transcript": text}
 
 
