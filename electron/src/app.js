@@ -1,8 +1,8 @@
 window.addEventListener('DOMContentLoaded', () => {
     const copyBtn = document.getElementById('copy-btn');
     const recordBtn = document.getElementById('record-btn');
-    const recordBtnText = recordBtn.querySelector('span');
-    const recordBtnIcon = recordBtn.querySelector('svg');
+    const labelEl = recordBtn.querySelector('.label');
+    const iconEl = recordBtn.querySelector('svg');
     const transcriptEl = document.getElementById('transcript');
 
     const API_PORT = 8000;
@@ -17,9 +17,105 @@ window.addEventListener('DOMContentLoaded', () => {
         <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
     `;
 
-    let recording = false;
-    let processing = false;
-    const transcriptBuffer = [];
+    const States = {
+        IDLE: 'idle',
+        RECORDING: 'recording',
+        PROCESSING: 'processing',
+        ERROR: 'error'
+    };
+    let state = States.IDLE;
+    let mediaRecorder;
+    let chunks = [];
+
+    function setState(newState) {
+        state = newState;
+        recordBtn.classList.remove('state-idle', 'state-recording', 'state-processing', 'state-error');
+        recordBtn.classList.add(`state-${newState}`);
+        switch (newState) {
+            case States.IDLE:
+                labelEl.textContent = 'Start Recording';
+                iconEl.innerHTML = micIcon;
+                recordBtn.disabled = false;
+                break;
+            case States.RECORDING:
+                labelEl.textContent = 'Stop Recording';
+                iconEl.innerHTML = stopIcon;
+                recordBtn.disabled = false;
+                break;
+            case States.PROCESSING:
+                labelEl.textContent = 'Processing...';
+                iconEl.innerHTML = '';
+                recordBtn.disabled = true;
+                break;
+            case States.ERROR:
+                labelEl.textContent = 'Error';
+                iconEl.innerHTML = micIcon;
+                recordBtn.disabled = false;
+                break;
+        }
+    }
+
+    async function startRecording() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            chunks = [];
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = e => chunks.push(e.data);
+            mediaRecorder.onstop = handleStop;
+            mediaRecorder.start();
+            setState(States.RECORDING);
+        } catch (err) {
+            console.error('Failed to start recording', err);
+            setState(States.ERROR);
+        }
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        }
+    }
+
+    async function handleStop() {
+        setState(States.PROCESSING);
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', blob, 'recording.webm');
+        try {
+            const res = await fetch(`http://localhost:${API_PORT}/transcribe`, {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            const text = data.text || data.transcript;
+            if (text !== undefined) {
+                appendTranscript(text);
+                document.dispatchEvent(new CustomEvent('transcript-ready', { detail: text }));
+                setState(States.IDLE);
+            } else {
+                setState(States.ERROR);
+            }
+        } catch (err) {
+            console.error('Failed to transcribe', err);
+            setState(States.ERROR);
+        }
+    }
+
+    function appendTranscript(text) {
+        const p = document.createElement('p');
+        p.textContent = text;
+        transcriptEl.appendChild(p);
+        transcriptEl.scrollTop = transcriptEl.scrollHeight;
+    }
+
+    function toggleRecording() {
+        if (state === States.IDLE) {
+            startRecording();
+        } else if (state === States.RECORDING) {
+            stopRecording();
+        }
+    }
 
     copyBtn.addEventListener('click', () => {
         const text = transcriptEl.innerText.trim();
@@ -28,58 +124,14 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    recordBtn.addEventListener('click', async () => {
-        if (processing) {
-            return;
-        }
+    recordBtn.addEventListener('click', toggleRecording);
 
-        if (!recording) {
-            // Start recording
-            try {
-                await fetch(`http://localhost:${API_PORT}/record`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'start' })
-                });
-                recording = true;
-                recordBtnText.textContent = 'Stop Recording';
-                recordBtnIcon.innerHTML = stopIcon;
-            } catch (err) {
-                console.error('Failed to start recording', err);
-            }
-        } else {
-            // Stop recording
-            try {
-                const res = await fetch(`http://localhost:${API_PORT}/record`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'stop' })
-                });
-                const data = await res.json();
-
-                processing = true;
-                recording = false;
-                recordBtnText.textContent = 'Processing...';
-                recordBtnIcon.innerHTML = '';
-                recordBtn.disabled = true;
-                await new Promise(r => setTimeout(r, 50));
-
-                if (data && data.file) {
-                    const tRes = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(data.file)}`);
-                    const tData = await tRes.json();
-                    if (tData && tData.transcript !== undefined) {
-                        transcriptBuffer.push(tData.transcript);
-                        transcriptEl.innerHTML = transcriptBuffer.map(t => `<p>${t}</p>`).join('');
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to stop recording', err);
-            } finally {
-                processing = false;
-                recordBtn.disabled = false;
-                recordBtnText.textContent = 'Start Recording';
-                recordBtnIcon.innerHTML = micIcon;
-            }
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && document.activeElement === document.body) {
+            e.preventDefault();
+            toggleRecording();
         }
     });
+
+    setState(States.IDLE);
 });
