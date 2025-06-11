@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import sounddevice as sd
 
-from constants import RECORDING_DIR, SAMPLE_RATE
+from constants import RECORDING_DIR, SAMPLE_RATE, TIMESTAMP_FORMAT
 
 
 class Recorder:
@@ -17,6 +17,7 @@ class Recorder:
         self.audio_queue: queue.Queue[np.ndarray] = queue.Queue()
         self.stream: Optional[sd.InputStream] = None
         self.recording = False
+        self.last_timestamp: Optional[str] = None
 
     def _callback(self, indata, frames, time, status):
         if status:
@@ -68,8 +69,9 @@ class Recorder:
             return None
         audio = np.concatenate(frames, axis=0)
         audio = np.int16(audio * 32767)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_path = os.path.join(RECORDING_DIR, f"recording_{timestamp}.wav")
+        timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
+        self.last_timestamp = timestamp
+        file_path = os.path.join(RECORDING_DIR, f"RECORDING_{timestamp}.wav")
         with wave.open(file_path, "wb") as wf:
             wf.setnchannels(1)
             wf.setsampwidth(2)
