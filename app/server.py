@@ -30,8 +30,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-recorder = Recorder()
-transcript_buffer = TranscriptBuffer()
+try:
+    recorder = Recorder()
+except Exception as exc:  # pragma: no cover - handle init issues
+    logger.exception("Recorder initialization failed: %s", exc)
+    recorder = None
+
+try:
+    transcript_buffer = TranscriptBuffer()
+except Exception as exc:  # pragma: no cover - handle init issues
+    logger.exception("TranscriptBuffer initialization failed: %s", exc)
+    transcript_buffer = None  # type: ignore
 
 
 @app.post("/record")
@@ -41,9 +50,17 @@ async def record(request: Request):
     action = data.get("action")
     if action == "start":
         logger.info("Starting recording")
-        recorder.start()
+        if recorder is None:
+            logger.error("Recorder not available")
+            raise HTTPException(status_code=503, detail="Recorder unavailable")
+        success = recorder.start()
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to start recording")
         return {"status": "recording"}
     if action == "stop":
+        if recorder is None:
+            logger.error("Recorder not available")
+            raise HTTPException(status_code=503, detail="Recorder unavailable")
         path = recorder.stop()
         logger.info("Stopped recording, saved to %s", path)
         if path is None:
@@ -72,7 +89,8 @@ async def transcribe(file: str):
         logger.exception("run_model failed for %s", path)
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
 
-    transcript_buffer.append(text, path)
+    if transcript_buffer is not None:
+        transcript_buffer.append(text, path)
     return {"transcript": text}
 
 
@@ -91,7 +109,8 @@ async def transcribe_upload(file: UploadFile = File(...)):
         logger.exception("run_model failed for %s", save_path)
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
 
-    transcript_buffer.append(text, save_path)
+    if transcript_buffer is not None:
+        transcript_buffer.append(text, save_path)
     return {"transcript": text}
 
 
@@ -100,10 +119,14 @@ async def list_transcripts():
     """Return transcript file names with modification times."""
     files = []
     if os.path.exists(TRANSCRIPT_DIR):
-        for name in os.listdir(TRANSCRIPT_DIR):
-            if name.endswith(".txt"):
-                path = os.path.join(TRANSCRIPT_DIR, name)
-                files.append({"name": name, "mtime": os.path.getmtime(path)})
+        try:
+            for name in os.listdir(TRANSCRIPT_DIR):
+                if name.endswith(".txt"):
+                    path = os.path.join(TRANSCRIPT_DIR, name)
+                    files.append({"name": name, "mtime": os.path.getmtime(path)})
+        except OSError as exc:
+            logger.error("Failed to list transcripts: %s", exc)
+            raise HTTPException(status_code=500, detail="Failed to list transcripts") from exc
     files.sort(key=lambda x: x["mtime"], reverse=True)
     return {"files": files}
 
@@ -116,8 +139,12 @@ async def get_transcript(name: str):
         raise HTTPException(status_code=400, detail="Invalid file")
     if not os.path.exists(path):
         raise HTTPException(status_code=404, detail="File not found")
-    with open(path, "r", encoding="utf-8") as f:
-        return {"content": f.read()}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return {"content": f.read()}
+    except OSError as exc:
+        logger.error("Failed to read %s: %s", path, exc)
+        raise HTTPException(status_code=500, detail="Failed to read transcript") from exc
 
 
 @app.post("/export-docx")
@@ -132,8 +159,12 @@ async def export_docx(request: Request):
     timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     path = os.path.join(TRANSCRIPT_DIR, f"EXPORT_{timestamp}.txt")
 
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(text)
+    except OSError as exc:
+        logger.error("Failed to write %s: %s", path, exc)
+        raise HTTPException(status_code=500, detail="Failed to save transcript") from exc
 
     return {"path": path}
 
@@ -148,6 +179,7 @@ def main() -> None:
     try:
         # Run the FastAPI ``app`` directly to avoid import path issues when
         # this module is executed with ``python -m app.server``.
+        logger.info("Starting Uvicorn on http://127.0.0.1:8000")
         uvicorn.run(app, host="127.0.0.1", port=8000)
     except Exception as exc:
         logger.error("Failed to launch Uvicorn: %s", exc)
