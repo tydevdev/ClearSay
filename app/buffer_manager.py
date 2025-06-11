@@ -3,7 +3,7 @@ import shutil
 from datetime import datetime
 from typing import List, Optional
 
-from constants import TRANSCRIPT_DIR
+from constants import TRANSCRIPT_DIR, TIMESTAMP_FORMAT
 
 
 class TranscriptBuffer:
@@ -20,14 +20,14 @@ class TranscriptBuffer:
         if not text:
             return
         if self.base_timestamp is None:
-            self.base_timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
+            self.base_timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
             self.transcript_path = os.path.join(
-                TRANSCRIPT_DIR, f"{self.base_timestamp}.txt"
+                TRANSCRIPT_DIR, f"TRANSCRIPT_{self.base_timestamp}.txt"
             )
         if os.path.exists(audio_path):
             dest = os.path.join(
                 TRANSCRIPT_DIR,
-                f"{self.base_timestamp}_{self.counter:03d}.wav",
+                f"RECORDING_{self.base_timestamp}_{self.counter:03d}.wav",
             )
             try:
                 shutil.copy2(audio_path, dest)

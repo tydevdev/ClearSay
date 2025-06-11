@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from constants import TRANSCRIPT_DIR
+from constants import TRANSCRIPT_DIR, TIMESTAMP_FORMAT
 
 
 class TranscriptManager:
@@ -11,14 +11,15 @@ class TranscriptManager:
     def __init__(self) -> None:
         self.current_path: Optional[str] = None
 
-    def save(self, text: str) -> Optional[str]:
+    def save(self, text: str, timestamp: Optional[str] = None) -> Optional[str]:
         """Write ``text`` to the current transcript file."""
         if not text:
             return None
         if self.current_path is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            if timestamp is None:
+                timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
             self.current_path = os.path.join(
-                TRANSCRIPT_DIR, f"transcript_{timestamp}.txt"
+                TRANSCRIPT_DIR, f"TRANSCRIPT_{timestamp}.txt"
             )
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:

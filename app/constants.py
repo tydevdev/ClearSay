@@ -10,6 +10,9 @@ BUTTON_HOVER = "#b0d4ff"
 # Recording parameters
 SAMPLE_RATE = 44100
 
+# Shared timestamp format for recordings and transcripts
+TIMESTAMP_FORMAT = "%Y_%m_%d_%H_%M"
+
 # Directories for recorded audio and saved transcripts
 RECORDING_DIR = os.path.join(ROOT_DIR, "recorded_audio")
 TRANSCRIPT_DIR = os.path.join(ROOT_DIR, "transcripts")

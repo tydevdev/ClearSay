@@ -15,6 +15,7 @@ class ClearSayUI:
         self.recorder = recorder
         self.transcripts = transcripts
         self.sidebar_visible = False
+        self.current_timestamp: str | None = None
 
         # App root must exist before any Tk variables are created
         self.app: ctk.CTk | None = None
@@ -204,6 +205,7 @@ class ClearSayUI:
             self.start_button.update_idletasks()
             file_path = self.recorder.stop()
             if file_path:
+                self.current_timestamp = self.recorder.last_timestamp
                 threading.Thread(
                     target=self.process_transcription,
                     args=(file_path,),
@@ -246,7 +248,7 @@ class ClearSayUI:
 
     def save_current_transcript(self) -> None:
         text = self.text_box.get("1.0", "end").strip()
-        path = self.transcripts.save(text)
+        path = self.transcripts.save(text, self.current_timestamp)
         if path is None:
             self.status_label.configure(text="Failed to save transcript")
             return
@@ -259,6 +261,7 @@ class ClearSayUI:
         self.text_box.delete("1.0", "end")
         self.text_box.configure(state="disabled")
         self.transcripts.new()
+        self.current_timestamp = None
 
     def new_transcription(self) -> None:
         self.clear_transcript()
