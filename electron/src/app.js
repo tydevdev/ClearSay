@@ -10,7 +10,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const path = require('path');
     const os = require('os');
     const RECORDING_DIR = path.join(os.tmpdir(), 'clearsay_recordings');
-    const DISCUSSIONS_DIR = path.join(__dirname, '..', 'saved_data', 'discussions');
+    // ``__dirname`` points to ``electron/src`` when running in the renderer
+    // process. Step up two levels to reach the repository root where the
+    // ``saved_data`` folder lives.
+    const DISCUSSIONS_DIR = path.join(__dirname, '..', '..', 'saved_data', 'discussions');
     try {
         fs.mkdirSync(RECORDING_DIR, { recursive: true });
     } catch (_) {}
@@ -57,7 +60,9 @@ window.addEventListener('DOMContentLoaded', () => {
             const metaPath = path.join(DISCUSSIONS_DIR, latestDir, 'segments.json');
             const data = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
             if (data && Array.isArray(data.segments)) {
-                return data.segments.map(s => path.join(latestDir, s.wav));
+                const segs = [...data.segments];
+                segs.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+                return segs.map(s => path.join(latestDir, s.wav));
             }
         } catch (err) {
             console.error('Failed to read segments', err);
