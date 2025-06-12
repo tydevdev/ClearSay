@@ -38,7 +38,9 @@ Execute the application from the `app` folder:
 python app.py
 ```
 
-The app now uses a single light theme with soft blue accents for readability.
+The app now uses a single light theme with soft blue accents for readability. A
+**Re-Transcribe** button in both the Python and Electron interfaces lets you run
+the model again on the most recent recording.
 
 ### API server
 
