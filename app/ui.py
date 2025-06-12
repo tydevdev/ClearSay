@@ -11,7 +11,7 @@ from constants import (
 )
 from model import run_model
 from recorder import Recorder
-from transcripts import TranscriptManager
+from storage import TranscriptStorage
 
 
 def latest_audio_path() -> str | None:
@@ -24,7 +24,7 @@ def latest_audio_path() -> str | None:
 
 
 class ClearSayUI:
-    def __init__(self, recorder: Recorder, transcripts: TranscriptManager) -> None:
+    def __init__(self, recorder: Recorder, transcripts: TranscriptStorage) -> None:
         """Initialize the UI with the recorder and transcript manager."""
 
         self.recorder = recorder

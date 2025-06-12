@@ -1,11 +1,11 @@
 from recorder import Recorder
-from transcripts import TranscriptManager
+from storage import TranscriptStorage
 from ui import ClearSayUI
 
 
 def main() -> None:
     recorder = Recorder()
-    transcripts = TranscriptManager()
+    transcripts = TranscriptStorage()
     ui = ClearSayUI(recorder, transcripts)
     ui.run()
 
