@@ -11,11 +11,17 @@
     <div class="container">
         <h1 class="app-title">ClearSay</h1>
         <div class="discussion-header">
+            <input id="discussion-name-input" class="discussion-input" type="text" style="display:none" />
             <p id="discussion-label" class="discussion-label"></p>
             <button id="rename-btn" class="rename-btn" title="Rename Discussion" aria-label="Rename Discussion">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M12 20h9" />
                     <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                </svg>
+            </button>
+            <button id="save-name-btn" class="save-btn" title="Save Name" aria-label="Save Name" style="display:none">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M5 13l4 4L19 7" />
                 </svg>
             </button>
         </div>
