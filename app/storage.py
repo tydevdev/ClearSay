@@ -15,7 +15,7 @@ from constants import (
 class DiscussionStorage:
     """Manage recordings and transcripts grouped by discussion."""
 
-    def __init__(self) -> None:
+    def __init__(self, auto_resume: bool = False) -> None:
         self.current_id: Optional[str] = None
         self.discussion_path: Optional[str] = None
         self.audio_dir: Optional[str] = None
@@ -26,26 +26,26 @@ class DiscussionStorage:
         self.segment_count: int = 0
         self.name: Optional[str] = None
 
-        # Automatically resume the most recent discussion if available
-        self._resume_last_discussion()
+        if auto_resume:
+            self.resume_last_discussion()
 
-    def _resume_last_discussion(self) -> None:
+    def _resume_last_discussion(self) -> bool:
         """Populate fields from the latest ``segments.json`` if present."""
         if not os.path.exists(DISCUSSIONS_DIR):
-            return
+            return False
         dirs = [d for d in os.listdir(DISCUSSIONS_DIR) if os.path.isdir(os.path.join(DISCUSSIONS_DIR, d))]
         if not dirs:
-            return
+            return False
         dirs.sort()
         latest = dirs[-1]
         seg_path = os.path.join(DISCUSSIONS_DIR, latest, "segments.json")
         if not os.path.exists(seg_path):
-            return
+            return False
         try:
             with open(seg_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
         except Exception:
-            return
+            return False
 
         self.current_id = data.get("created_at", latest)
         self.discussion_path = os.path.join(DISCUSSIONS_DIR, latest)
@@ -56,6 +56,11 @@ class DiscussionStorage:
         self.segments = data.get("segments", [])
         self.segment_count = len(self.segments)
         self.name = data.get("name")
+        return True
+
+    def resume_last_discussion(self) -> bool:
+        """Public wrapper to resume the most recent discussion."""
+        return self._resume_last_discussion()
 
     # ------------------------------------------------------------------
     # internal helpers
