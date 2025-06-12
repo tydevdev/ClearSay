@@ -95,6 +95,15 @@ class ClearSayUI:
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_rowconfigure(4, weight=1)
 
+        self.discussion_label = ctk.CTkLabel(
+            self.main_frame,
+            text="",
+            text_color=TEXT_COLOR,
+            font=ctk.CTkFont(size=12, slant="italic"),
+        )
+        self.discussion_label.grid(row=0, column=0, padx=20, pady=(5, 0), sticky="w")
+        self.update_discussion_label()
+
         ctk.CTkLabel(
             self.main_frame,
             text="Press 'Start Recording', speak, then wait for the transcription.",
@@ -266,6 +275,7 @@ class ClearSayUI:
         self.status_label.configure(text="")
         self.transcripts.add_segment(transcription, audio_path)
         self.save_current_transcript()
+        self.update_discussion_label()
         self.refresh_transcripts_list(self.search_var.get())
         self.start_button.configure(
             text="Start Recording",
@@ -296,6 +306,7 @@ class ClearSayUI:
         self.text_box.configure(state="disabled")
         self.transcripts.new()
         self.current_timestamp = None
+        self.update_discussion_label()
 
     def new_transcription(self) -> None:
         self.clear_transcript()
@@ -311,6 +322,14 @@ class ClearSayUI:
         self.main_frame.configure(fg_color=gradient)
         self.transcripts_sidebar.configure(fg_color=gradient)
         self.transcripts_list.configure(fg_color=gradient)
+
+    def update_discussion_label(self) -> None:
+        text = (
+            f"Discussion: {self.transcripts.current_id}"
+            if self.transcripts.current_id
+            else "No active discussion"
+        )
+        self.discussion_label.configure(text=text)
 
     def toggle_transcripts_sidebar(self) -> None:
         if self.sidebar_visible:
@@ -357,6 +376,7 @@ class ClearSayUI:
         self.text_box.delete("1.0", "end")
         self.text_box.insert("1.0", content)
         self.text_box.configure(state="disabled")
+        self.discussion_label.configure(text=f"Viewing: {name}")
 
     def retranscribe_latest_audio(self) -> None:
         """Transcribe the most recent recording again."""

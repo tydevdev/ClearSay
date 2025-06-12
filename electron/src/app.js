@@ -5,6 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const recordBtnText = recordBtn.querySelector('span');
     const recordBtnIcon = recordBtn.querySelector('svg');
     const transcriptEl = document.getElementById('transcript');
+    const discussionEl = document.getElementById('discussion-label');
 
     const fs = require('fs');
     const path = require('path');
@@ -33,6 +34,18 @@ window.addEventListener('DOMContentLoaded', () => {
     let recording = false;
     let processing = false;
     const transcriptBuffer = [];
+
+    async function updateDiscussionLabel() {
+        try {
+            const res = await fetch(`http://localhost:${API_PORT}/current_discussion`);
+            const data = await res.json();
+            discussionEl.textContent = data.id ? `Discussion: ${data.id}` : 'No active discussion';
+        } catch (_) {
+            discussionEl.textContent = 'No active discussion';
+        }
+    }
+
+    updateDiscussionLabel();
 
     function getLatestAudio() {
         try {
@@ -119,6 +132,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     if (tData && tData.transcript !== undefined) {
                         transcriptBuffer.push(tData.transcript);
                         transcriptEl.innerHTML = transcriptBuffer.map(t => `<p>${t}</p>`).join('');
+                        await updateDiscussionLabel();
                     }
                 }
             } catch (err) {
@@ -168,6 +182,7 @@ window.addEventListener('DOMContentLoaded', () => {
             recordBtn.disabled = false;
             retranscribeBtn.disabled = false;
             retranscribeBtn.textContent = 'Re-Transcribe';
+            await updateDiscussionLabel();
         }
     });
 });

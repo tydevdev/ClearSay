@@ -81,6 +81,12 @@ async def transcribe(file: str):
     return {"transcript": text}
 
 
+@app.get("/current_discussion")
+async def current_discussion() -> dict[str, str | None]:
+    """Return the currently active discussion ID, if any."""
+    return {"id": transcript_buffer.current_id}
+
+
 def main() -> None:
     try:
         import uvicorn
