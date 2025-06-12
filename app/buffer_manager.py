@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 from typing import List, Optional, Dict
 
+from utils.fileio import atomic_write
+
 from constants import TRANSCRIPT_DIR, TIMESTAMP_FORMAT, METADATA_DIR
 
 
@@ -73,8 +75,7 @@ class TranscriptBuffer:
         seg_path = os.path.join(TRANSCRIPT_DIR, seg_name)
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
-            with open(seg_path, "w", encoding="utf-8") as f:
-                f.write(text.strip() + "\n")
+            atomic_write(seg_path, text.strip() + "\n")
         except OSError:
             pass
 
@@ -89,12 +90,13 @@ class TranscriptBuffer:
             self.text_parts[idx] = text.strip()
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
-            with open(self.transcript_path, "w", encoding="utf-8") as f:
-                f.write("\n\n".join(self.text_parts) + "\n")
+            atomic_write(self.transcript_path, "\n\n".join(self.text_parts) + "\n")
             if self.metadata_path:
                 os.makedirs(METADATA_DIR, exist_ok=True)
-                with open(self.metadata_path, "w", encoding="utf-8") as mf:
-                    json.dump({"segments": self.segments}, mf, indent=2)
+                atomic_write(
+                    self.metadata_path,
+                    json.dumps({"segments": self.segments}, indent=2),
+                )
         except OSError:
             return False
         finally:

@@ -3,6 +3,8 @@ import json
 from datetime import datetime
 from typing import List, Optional, Dict
 
+from utils.fileio import atomic_write
+
 from constants import TRANSCRIPT_DIR, TIMESTAMP_FORMAT, METADATA_DIR
 
 
@@ -27,8 +29,10 @@ class TranscriptManager:
             return
         os.makedirs(METADATA_DIR, exist_ok=True)
         try:
-            with open(self.metadata_path, "w", encoding="utf-8") as f:
-                json.dump({"segments": self.segments}, f, indent=2)
+            atomic_write(
+                self.metadata_path,
+                json.dumps({"segments": self.segments}, indent=2),
+            )
         except OSError:
             pass
 
@@ -45,8 +49,7 @@ class TranscriptManager:
         seg_path = os.path.join(TRANSCRIPT_DIR, seg_name)
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
-            with open(seg_path, "w", encoding="utf-8") as f:
-                f.write(text + "\n")
+            atomic_write(seg_path, text + "\n")
         except OSError:
             pass
         self.segments.append({"audio": os.path.basename(audio_path), "transcript": seg_name})
@@ -64,8 +67,7 @@ class TranscriptManager:
             self.base_timestamp = timestamp
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
-            with open(self.current_path, "w", encoding="utf-8") as f:
-                f.write(text + "\n")
+            atomic_write(self.current_path, text + "\n")
         except OSError:
             return None
         self._save_metadata()
