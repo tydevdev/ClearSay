@@ -6,6 +6,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const recordBtnIcon = recordBtn.querySelector('svg');
     const transcriptEl = document.getElementById('transcript');
     const discussionEl = document.getElementById('discussion-label');
+    const renameBtn = document.getElementById('rename-btn');
 
     const fs = require('fs');
     const path = require('path');
@@ -39,13 +40,37 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`http://localhost:${API_PORT}/current_discussion`);
             const data = await res.json();
-            discussionEl.textContent = data.id ? `Discussion: ${data.id}` : 'No active discussion';
+            if (data.id) {
+                const label = data.name ? data.name : data.id;
+                discussionEl.textContent = `Discussion: ${label}`;
+                renameBtn.disabled = false;
+            } else {
+                discussionEl.textContent = 'No active discussion';
+                renameBtn.disabled = true;
+            }
         } catch (_) {
             discussionEl.textContent = 'No active discussion';
+            renameBtn.disabled = true;
         }
     }
 
     updateDiscussionLabel();
+
+    renameBtn.addEventListener('click', async () => {
+        const current = discussionEl.textContent.replace('Discussion: ', '').trim();
+        const name = prompt('Rename discussion', current);
+        if (name === null) return;
+        try {
+            await fetch(`http://localhost:${API_PORT}/discussion_name`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            await updateDiscussionLabel();
+        } catch (err) {
+            console.error('Failed to rename discussion', err);
+        }
+    });
 
     function getLatestAudio() {
         try {
