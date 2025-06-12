@@ -57,6 +57,13 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.post("/reset")
+async def reset() -> dict[str, str]:
+    """Reset the transcript buffer so a session can be rebuilt."""
+    transcript_buffer.reset()
+    return {"status": "reset"}
+
+
 @app.get("/transcribe")
 async def transcribe(file: str):
     """Transcribe ``file`` from :data:`RECORDING_DIR`."""

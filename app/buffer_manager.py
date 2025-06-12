@@ -62,3 +62,12 @@ class TranscriptBuffer:
         finally:
             self.counter += 1
         return True
+
+    def reset(self) -> None:
+        """Clear all accumulated state so transcripts can be rebuilt."""
+        self.base_timestamp = None
+        self.text_parts = []
+        self.counter = 1
+        self.transcript_path = None
+        self.metadata_path = None
+        self.segments = []
