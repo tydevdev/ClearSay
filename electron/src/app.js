@@ -7,6 +7,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const transcriptEl = document.getElementById('transcript');
     const discussionEl = document.getElementById('discussion-label');
     const renameBtn = document.getElementById('rename-btn');
+    const saveNameBtn = document.getElementById('save-name-btn');
+    const nameInput = document.getElementById('discussion-name-input');
 
     const fs = require('fs');
     const path = require('path');
@@ -44,22 +46,47 @@ window.addEventListener('DOMContentLoaded', () => {
                 const label = data.name ? data.name : data.id;
                 discussionEl.textContent = `Discussion: ${label}`;
                 renameBtn.disabled = false;
+                renameBtn.style.display = 'inline-flex';
+                discussionEl.style.display = '';
+                nameInput.style.display = 'none';
+                saveNameBtn.style.display = 'none';
             } else {
                 discussionEl.textContent = 'No active discussion';
                 renameBtn.disabled = true;
+                renameBtn.style.display = 'none';
+                discussionEl.style.display = '';
+                nameInput.style.display = 'none';
+                saveNameBtn.style.display = 'none';
             }
         } catch (_) {
             discussionEl.textContent = 'No active discussion';
             renameBtn.disabled = true;
+            renameBtn.style.display = 'none';
+            discussionEl.style.display = '';
+            nameInput.style.display = 'none';
+            saveNameBtn.style.display = 'none';
         }
     }
 
     updateDiscussionLabel();
 
-    renameBtn.addEventListener('click', async () => {
+    renameBtn.addEventListener('click', () => {
         const current = discussionEl.textContent.replace('Discussion: ', '').trim();
-        const name = prompt('Rename discussion', current);
-        if (name === null) return;
+        nameInput.value = current;
+        discussionEl.style.display = 'none';
+        nameInput.style.display = 'inline';
+        saveNameBtn.style.display = 'inline-flex';
+        renameBtn.style.display = 'none';
+        saveNameBtn.disabled = true;
+    });
+
+    nameInput.addEventListener('input', () => {
+        const current = discussionEl.textContent.replace('Discussion: ', '').trim();
+        saveNameBtn.disabled = nameInput.value.trim() === current;
+    });
+
+    saveNameBtn.addEventListener('click', async () => {
+        const name = nameInput.value.trim();
         try {
             await fetch(`http://localhost:${API_PORT}/discussion_name`, {
                 method: 'POST',
@@ -70,6 +97,10 @@ window.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error('Failed to rename discussion', err);
         }
+        discussionEl.style.display = '';
+        nameInput.style.display = 'none';
+        saveNameBtn.style.display = 'none';
+        renameBtn.style.display = 'inline-flex';
     });
 
     function getLatestAudio() {
