@@ -17,8 +17,7 @@ __pycache__/
 *.pyc
 
 # Generated transcripts and recordings
-transcripts/
-recorded_audio/
+saved_data/
 
 
 # Electron build & deps
