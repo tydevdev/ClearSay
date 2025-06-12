@@ -2,10 +2,25 @@ import os
 import threading
 import customtkinter as ctk
 
-from constants import BUTTON_FG, BUTTON_HOVER, TEXT_COLOR, TRANSCRIPT_DIR
+from constants import (
+    BUTTON_FG,
+    BUTTON_HOVER,
+    TEXT_COLOR,
+    TRANSCRIPT_DIR,
+    RECORDING_DIR,
+)
 from model import run_model
 from recorder import Recorder
 from transcripts import TranscriptManager
+
+
+def latest_audio_path() -> str | None:
+    """Return the most recent ``.wav`` file from :data:`RECORDING_DIR`."""
+    files = [f for f in os.listdir(RECORDING_DIR) if f.lower().endswith(".wav")]
+    if not files:
+        return None
+    files.sort(reverse=True)
+    return os.path.join(RECORDING_DIR, files[0])
 
 
 class ClearSayUI:
@@ -159,6 +174,20 @@ class ClearSayUI:
         except Exception:
             pass
 
+        self.retranscribe_button = ctk.CTkButton(
+            button_frame,
+            text="Re-Transcribe",
+            command=self.retranscribe_latest_audio,
+            fg_color=BUTTON_FG,
+            hover_color=BUTTON_HOVER,
+            text_color=TEXT_COLOR,
+        )
+        self.retranscribe_button.grid(row=0, column=3, padx=5)
+        try:
+            ctk.CTkToolTip(self.retranscribe_button, message="Transcribe latest audio")
+        except Exception:
+            pass
+
         self.status_label = ctk.CTkLabel(self.main_frame, text="", text_color=TEXT_COLOR)
         self.status_label.grid(row=6, column=0, pady=(0, 10))
 
@@ -220,8 +249,11 @@ class ClearSayUI:
 
     def process_transcription(self, file_path: str) -> None:
         """Run the model and update the UI when finished."""
-
-        transcription = run_model(file_path)
+        try:
+            transcription = run_model(file_path)
+        except Exception:
+            self.app.after(0, lambda: self._handle_transcription_error("Transcription failed"))
+            return
         self.app.after(0, lambda: self._update_transcription_ui(transcription))
 
     def _update_transcription_ui(self, transcription: str) -> None:
@@ -239,6 +271,7 @@ class ClearSayUI:
             state="normal",
             font=ctk.CTkFont(size=16, weight="bold"),
         )
+        self.retranscribe_button.configure(state="normal")
 
     def copy_to_clipboard(self) -> None:
         text = self.text_box.get("1.0", "end").strip()
@@ -321,3 +354,44 @@ class ClearSayUI:
         self.text_box.delete("1.0", "end")
         self.text_box.insert("1.0", content)
         self.text_box.configure(state="disabled")
+
+    def retranscribe_latest_audio(self) -> None:
+        """Transcribe the most recent recording again."""
+        if self.start_button.cget("state") == "disabled":
+            return
+        path = latest_audio_path()
+        if path is None:
+            self._handle_transcription_error("No recent audio found")
+            return
+        self.start_button.configure(state="disabled")
+        self.retranscribe_button.configure(state="disabled")
+        self.status_label.configure(text="Transcribing...")
+        name = os.path.splitext(os.path.basename(path))[0]
+        if name.startswith("RECORDING_"):
+            self.current_timestamp = name[len("RECORDING_") :]
+        else:
+            self.current_timestamp = None
+        threading.Thread(
+            target=self._retranscribe_thread, args=(path,), daemon=True
+        ).start()
+
+    def _retranscribe_thread(self, file_path: str) -> None:
+        try:
+            transcription = run_model(file_path)
+        except Exception:
+            self.app.after(0, lambda: self._handle_transcription_error("Transcription failed"))
+            return
+        self.app.after(0, lambda: self._update_transcription_ui(transcription))
+
+    def _handle_transcription_error(self, message: str) -> None:
+        self.status_label.configure(text=message, fg_color="#fff3cd")
+        self.start_button.configure(
+            text="Start Recording",
+            state="normal",
+            font=ctk.CTkFont(size=16, weight="bold"),
+        )
+        self.retranscribe_button.configure(state="normal")
+        self.app.after(
+            3000,
+            lambda: self.status_label.configure(text="", fg_color="transparent"),
+        )
