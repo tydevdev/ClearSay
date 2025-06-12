@@ -8,8 +8,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const fs = require('fs');
     const path = require('path');
-    const RECORDING_DIR = path.join(__dirname, '..', 'saved_data', 'recorded_audio');
+    const os = require('os');
+    const RECORDING_DIR = path.join(os.tmpdir(), 'clearsay_recordings');
     const DISCUSSIONS_DIR = path.join(__dirname, '..', 'saved_data', 'discussions');
+    try {
+        fs.mkdirSync(RECORDING_DIR, { recursive: true });
+    } catch (_) {}
 
     const API_PORT = 8000;
 
