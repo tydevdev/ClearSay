@@ -1,9 +1,14 @@
 window.addEventListener('DOMContentLoaded', () => {
     const copyBtn = document.getElementById('copy-btn');
     const recordBtn = document.getElementById('record-btn');
+    const retranscribeBtn = document.getElementById('retranscribe-btn');
     const recordBtnText = recordBtn.querySelector('span');
     const recordBtnIcon = recordBtn.querySelector('svg');
     const transcriptEl = document.getElementById('transcript');
+
+    const fs = require('fs');
+    const path = require('path');
+    const RECORDING_DIR = path.join(__dirname, '..', 'saved_data', 'recorded_audio');
 
     const API_PORT = 8000;
 
@@ -20,6 +25,19 @@ window.addEventListener('DOMContentLoaded', () => {
     let recording = false;
     let processing = false;
     const transcriptBuffer = [];
+
+    function getLatestAudio() {
+        try {
+            const files = fs.readdirSync(RECORDING_DIR)
+                .filter(f => f.toLowerCase().endsWith('.wav'));
+            if (files.length === 0) return null;
+            files.sort().reverse();
+            return files[0];
+        } catch (err) {
+            console.error('Failed to read recordings', err);
+            return null;
+        }
+    }
 
     copyBtn.addEventListener('click', () => {
         const text = transcriptEl.innerText.trim();
@@ -80,6 +98,33 @@ window.addEventListener('DOMContentLoaded', () => {
                 recordBtnText.textContent = 'Start Recording';
                 recordBtnIcon.innerHTML = micIcon;
             }
+        }
+    });
+
+    retranscribeBtn.addEventListener('click', async () => {
+        if (processing) return;
+        const latest = getLatestAudio();
+        if (!latest) {
+            return;
+        }
+        try {
+            processing = true;
+            recordBtn.disabled = true;
+            retranscribeBtn.disabled = true;
+            retranscribeBtn.textContent = 'Processing...';
+            const res = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(latest)}`);
+            const data = await res.json();
+            if (data && data.transcript !== undefined) {
+                transcriptBuffer.push(data.transcript);
+                transcriptEl.innerHTML = transcriptBuffer.map(t => `<p>${t}</p>`).join('');
+            }
+        } catch (err) {
+            console.error('Failed to retranscribe', err);
+        } finally {
+            processing = false;
+            recordBtn.disabled = false;
+            retranscribeBtn.disabled = false;
+            retranscribeBtn.textContent = 'Re-Transcribe';
         }
     });
 });
