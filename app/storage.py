@@ -26,6 +26,37 @@ class DiscussionStorage:
         self.segment_count: int = 0
         self.name: Optional[str] = None
 
+        # Automatically resume the most recent discussion if available
+        self._resume_last_discussion()
+
+    def _resume_last_discussion(self) -> None:
+        """Populate fields from the latest ``segments.json`` if present."""
+        if not os.path.exists(DISCUSSIONS_DIR):
+            return
+        dirs = [d for d in os.listdir(DISCUSSIONS_DIR) if os.path.isdir(os.path.join(DISCUSSIONS_DIR, d))]
+        if not dirs:
+            return
+        dirs.sort()
+        latest = dirs[-1]
+        seg_path = os.path.join(DISCUSSIONS_DIR, latest, "segments.json")
+        if not os.path.exists(seg_path):
+            return
+        try:
+            with open(seg_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            return
+
+        self.current_id = data.get("created_at", latest)
+        self.discussion_path = os.path.join(DISCUSSIONS_DIR, latest)
+        self.audio_dir = os.path.join(self.discussion_path, "audio")
+        self.transcripts_dir = os.path.join(self.discussion_path, "transcripts")
+        self.segments_json = seg_path
+        self.full_transcript = os.path.join(self.discussion_path, "transcript_full.txt")
+        self.segments = data.get("segments", [])
+        self.segment_count = len(self.segments)
+        self.name = data.get("name")
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
