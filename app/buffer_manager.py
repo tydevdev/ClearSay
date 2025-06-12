@@ -47,8 +47,16 @@ class TranscriptBuffer:
                 f.write(text.strip() + "\n")
         except OSError:
             pass
-        self.segments.append({"audio": os.path.basename(audio_path), "transcript": seg_name})
-        self.text_parts.append(text.strip())
+
+        base_audio = os.path.basename(audio_path)
+        try:
+            idx = next(i for i, s in enumerate(self.segments) if s["audio"] == base_audio)
+        except StopIteration:
+            self.segments.append({"audio": base_audio, "transcript": seg_name})
+            self.text_parts.append(text.strip())
+        else:
+            self.segments[idx] = {"audio": base_audio, "transcript": seg_name}
+            self.text_parts[idx] = text.strip()
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
             with open(self.transcript_path, "w", encoding="utf-8") as f:
