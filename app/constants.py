@@ -24,10 +24,5 @@ DISCUSSIONS_DIR = os.path.join(DATA_DIR, "discussions")
 
 # Timestamp format for discussion folders (no microseconds)
 DISCUSSION_ID_FORMAT = "%Y-%m-%d_%H-%M-%S"
-TRANSCRIPT_DIR = os.path.join(DATA_DIR, "audio_transcripts")  # legacy
-METADATA_DIR = os.path.join(DATA_DIR, "metadata")  # legacy
-
 os.makedirs(RECORDING_DIR, exist_ok=True)
 os.makedirs(DISCUSSIONS_DIR, exist_ok=True)
-os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
-os.makedirs(METADATA_DIR, exist_ok=True)

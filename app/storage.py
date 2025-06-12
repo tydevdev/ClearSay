@@ -19,6 +19,7 @@ class DiscussionStorage:
         self.current_id: Optional[str] = None
         self.discussion_path: Optional[str] = None
         self.audio_dir: Optional[str] = None
+        self.transcripts_dir: Optional[str] = None
         self.segments_json: Optional[str] = None
         self.full_transcript: Optional[str] = None
         self.segments: List[Dict[str, str]] = []
@@ -38,7 +39,9 @@ class DiscussionStorage:
         self.current_id = timestamp
         self.discussion_path = os.path.join(DISCUSSIONS_DIR, timestamp)
         self.audio_dir = os.path.join(self.discussion_path, "audio")
+        self.transcripts_dir = os.path.join(self.discussion_path, "transcripts")
         os.makedirs(self.audio_dir, exist_ok=True)
+        os.makedirs(self.transcripts_dir, exist_ok=True)
         self.segments_json = os.path.join(self.discussion_path, "segments.json")
         self.full_transcript = os.path.join(
             self.discussion_path, "transcript_full.txt"
@@ -56,6 +59,7 @@ class DiscussionStorage:
         self.current_id = None
         self.discussion_path = None
         self.audio_dir = None
+        self.transcripts_dir = None
         self.segments_json = None
         self.full_transcript = None
         self.segments = []
@@ -67,7 +71,12 @@ class DiscussionStorage:
             return True
         if self.current_id is None:
             self._start_new_discussion()
-        assert self.discussion_path and self.audio_dir and self.full_transcript
+        assert (
+            self.discussion_path
+            and self.audio_dir
+            and self.transcripts_dir
+            and self.full_transcript
+        )
         self.segment_count += 1
         seg_id = f"seg{self.segment_count:03d}"
         wav_name = f"{seg_id}.wav"
@@ -77,12 +86,12 @@ class DiscussionStorage:
             shutil.move(audio_path, wav_dest)
         except Exception:
             wav_dest = audio_path
-        txt_dest = os.path.join(self.discussion_path, txt_name)
+        txt_dest = os.path.join(self.transcripts_dir, txt_name)
         atomic_write(txt_dest, text.strip() + "\n")
         entry = {
             "id": seg_id,
             "wav": os.path.relpath(wav_dest, self.discussion_path),
-            "txt": txt_name,
+            "txt": os.path.relpath(txt_dest, self.discussion_path),
             "timestamp": datetime.now().strftime(TIMESTAMP_FORMAT),
             "duration": duration,
         }

@@ -59,15 +59,17 @@ async def health() -> dict[str, str]:
 
 @app.get("/transcribe")
 async def transcribe(file: str):
-    """Transcribe ``file`` from :data:`RECORDING_DIR`."""
+    """Transcribe ``file`` from ``recorded_audio`` or ``discussions``."""
     path = os.path.abspath(os.path.join(RECORDING_DIR, file))
-    logger.info("Transcribe request for %s", path)
     recording_root = os.path.abspath(RECORDING_DIR)
-    if not path.startswith(recording_root + os.sep):
-        logger.warning("Invalid file path outside recording dir: %s", path)
-        raise HTTPException(status_code=400, detail="Invalid file")
-    if not os.path.exists(path):
-        logger.warning("File not found: %s", path)
+    valid = path.startswith(recording_root + os.sep) and os.path.exists(path)
+    if not valid:
+        path = os.path.abspath(os.path.join(DISCUSSIONS_DIR, file))
+        disc_root = os.path.abspath(DISCUSSIONS_DIR)
+        valid = path.startswith(disc_root + os.sep) and os.path.exists(path)
+    logger.info("Transcribe request for %s", path)
+    if not valid:
+        logger.warning("File not found or outside allowed dirs: %s", file)
         raise HTTPException(status_code=404, detail="File not found")
     try:
         text = run_model(path)
