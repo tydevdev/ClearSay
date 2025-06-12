@@ -9,7 +9,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const fs = require('fs');
     const path = require('path');
     const RECORDING_DIR = path.join(__dirname, '..', 'saved_data', 'recorded_audio');
-    const METADATA_DIR = path.join(__dirname, '..', 'saved_data', 'metadata');
+    const DISCUSSIONS_DIR = path.join(__dirname, '..', 'saved_data', 'discussions');
 
     const API_PORT = 8000;
 
@@ -42,17 +42,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function getLatestSessionAudio() {
         try {
-            const files = fs.readdirSync(METADATA_DIR)
-                .filter(f => f.toLowerCase().endsWith('.json'));
-            if (files.length === 0) return [];
-            files.sort().reverse();
-            const latestMeta = path.join(METADATA_DIR, files[0]);
-            const data = JSON.parse(fs.readFileSync(latestMeta, 'utf8'));
+            const dirs = fs.readdirSync(DISCUSSIONS_DIR)
+                .filter(d => {
+                    try { return fs.statSync(path.join(DISCUSSIONS_DIR, d)).isDirectory(); }
+                    catch { return false; }
+                });
+            if (dirs.length === 0) return [];
+            dirs.sort();
+            const latestDir = dirs[dirs.length - 1];
+            const metaPath = path.join(DISCUSSIONS_DIR, latestDir, 'segments.json');
+            const data = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
             if (data && Array.isArray(data.segments)) {
-                return data.segments.map(s => s.audio);
+                return data.segments.map(s => path.join(latestDir, s.wav));
             }
         } catch (err) {
-            console.error('Failed to read metadata', err);
+            console.error('Failed to read segments', err);
         }
         return [];
     }

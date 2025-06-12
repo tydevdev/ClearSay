@@ -1,5 +1,5 @@
 This folder holds additional documentation for ClearSay.
 
-Transcripts now resume automatically when the server starts. The last
-saved metadata file is loaded and new audio segments continue from
-where you left off.
+Transcripts now resume automatically when the server starts. The most
+recent discussion's ``segments.json`` file is loaded so new audio
+segments continue from where you left off.
