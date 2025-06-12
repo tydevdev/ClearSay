@@ -36,9 +36,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let recording = false;
     let processing = false;
+    let suppressLabelUpdate = false;
     const transcriptBuffer = [];
 
     async function updateDiscussionLabel() {
+        if (suppressLabelUpdate) return;
         try {
             const res = await fetch(`http://localhost:${API_PORT}/current_discussion`);
             const data = await res.json();
@@ -239,6 +241,7 @@ window.addEventListener('DOMContentLoaded', () => {
             transcriptBuffer.length = 0;
             transcriptEl.innerHTML = '';
 
+            suppressLabelUpdate = true;
             labelLatestDiscussion();
             await new Promise(r => setTimeout(r, 50));
 
@@ -252,6 +255,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     const text = (data && data.transcript !== undefined) ? data.transcript : '';
                     transcriptBuffer.push(text);
                     if (idx === 0) {
+                        suppressLabelUpdate = false;
                         await updateDiscussionLabel();
                     }
                     p.textContent = text;
@@ -265,6 +269,7 @@ window.addEventListener('DOMContentLoaded', () => {
             recordBtn.disabled = false;
             retranscribeBtn.disabled = false;
             retranscribeBtn.textContent = 'Re-Transcribe';
+            suppressLabelUpdate = false;
             await updateDiscussionLabel();
         }
     });
