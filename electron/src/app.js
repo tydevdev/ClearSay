@@ -139,6 +139,27 @@ window.addEventListener('DOMContentLoaded', () => {
         return [];
     }
 
+    function labelLatestDiscussion() {
+        try {
+            const dirs = fs.readdirSync(DISCUSSIONS_DIR)
+                .filter(d => {
+                    try { return fs.statSync(path.join(DISCUSSIONS_DIR, d)).isDirectory(); }
+                    catch { return false; }
+                });
+            if (!dirs.length) return;
+            dirs.sort();
+            const latest = dirs[dirs.length - 1];
+            const meta = path.join(DISCUSSIONS_DIR, latest, 'segments.json');
+            const info = JSON.parse(fs.readFileSync(meta, 'utf8'));
+            const label = info.name ? info.name : (info.created_at || latest);
+            discussionEl.textContent = `Discussion: ${label}`;
+            renameBtn.disabled = false;
+            renameBtn.style.display = 'inline-flex';
+        } catch (err) {
+            console.error('Failed to set latest discussion label', err);
+        }
+    }
+
     copyBtn.addEventListener('click', () => {
         const text = transcriptEl.innerText.trim();
         if (text) {
@@ -217,6 +238,9 @@ window.addEventListener('DOMContentLoaded', () => {
             retranscribeBtn.textContent = 'Transcribing...';
             transcriptBuffer.length = 0;
             transcriptEl.innerHTML = '';
+
+            labelLatestDiscussion();
+            await new Promise(r => setTimeout(r, 50));
 
             for (const [idx, file] of files.entries()) {
                 const p = document.createElement('p');
