@@ -24,6 +24,36 @@ class TranscriptBuffer:
             return name[len("RECORDING_") :]
         return datetime.now().strftime(TIMESTAMP_FORMAT)
 
+    def load_latest(self) -> None:
+        """Load the most recent transcript data from disk."""
+        files = [f for f in os.listdir(METADATA_DIR) if f.endswith(".json")]
+        if not files:
+            return
+        files.sort()
+        latest = files[-1]
+        self.metadata_path = os.path.join(METADATA_DIR, latest)
+        self.base_timestamp = os.path.splitext(latest)[0]
+        self.transcript_path = os.path.join(
+            TRANSCRIPT_DIR, f"{self.base_timestamp}.txt"
+        )
+
+        try:
+            with open(self.metadata_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except OSError:
+            return
+
+        self.segments = data.get("segments", [])
+        self.text_parts = []
+        for seg in self.segments:
+            seg_file = os.path.join(TRANSCRIPT_DIR, seg.get("transcript", ""))
+            try:
+                with open(seg_file, "r", encoding="utf-8") as tf:
+                    self.text_parts.append(tf.read().strip())
+            except OSError:
+                self.text_parts.append("")
+        self.counter = len(self.segments) + 1
+
     def append(self, text: str, audio_path: str) -> bool:
         """Append ``text`` for ``audio_path`` and update metadata.
 
