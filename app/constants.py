@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -19,10 +20,13 @@ SAMPLE_RATE = 44100
 TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S-%f"
 
 # Directories for recorded audio and discussion data
-RECORDING_DIR = os.path.join(DATA_DIR, "recorded_audio")
+# Store raw recordings in a temporary location rather than inside
+# ``saved_data`` so the folder doesn't persist between sessions.
+RECORDING_DIR = os.path.join(tempfile.gettempdir(), "clearsay_recordings")
 DISCUSSIONS_DIR = os.path.join(DATA_DIR, "discussions")
 
 # Timestamp format for discussion folders (no microseconds)
 DISCUSSION_ID_FORMAT = "%Y-%m-%d_%H-%M-%S"
+# Ensure directories exist
 os.makedirs(RECORDING_DIR, exist_ok=True)
 os.makedirs(DISCUSSIONS_DIR, exist_ok=True)
