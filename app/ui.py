@@ -254,9 +254,9 @@ class ClearSayUI:
         except Exception:
             self.app.after(0, lambda: self._handle_transcription_error("Transcription failed"))
             return
-        self.app.after(0, lambda: self._update_transcription_ui(transcription))
+        self.app.after(0, lambda: self._update_transcription_ui(transcription, file_path))
 
-    def _update_transcription_ui(self, transcription: str) -> None:
+    def _update_transcription_ui(self, transcription: str, audio_path: str) -> None:
         self.text_box.configure(state="normal")
         if self.text_box.get("1.0", "end").strip():
             self.text_box.insert("end", "\n\n" + transcription)
@@ -264,6 +264,7 @@ class ClearSayUI:
             self.text_box.insert("end", transcription)
         self.text_box.configure(state="disabled")
         self.status_label.configure(text="")
+        self.transcripts.add_segment(transcription, audio_path)
         self.save_current_transcript()
         self.refresh_transcripts_list(self.search_var.get())
         self.start_button.configure(
@@ -381,7 +382,7 @@ class ClearSayUI:
         except Exception:
             self.app.after(0, lambda: self._handle_transcription_error("Transcription failed"))
             return
-        self.app.after(0, lambda: self._update_transcription_ui(transcription))
+        self.app.after(0, lambda: self._update_transcription_ui(transcription, file_path))
 
     def _handle_transcription_error(self, message: str) -> None:
         self.status_label.configure(text=message, fg_color="#fff3cd")

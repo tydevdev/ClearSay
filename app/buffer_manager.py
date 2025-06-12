@@ -1,9 +1,9 @@
 import os
-import shutil
+import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict
 
-from constants import TRANSCRIPT_DIR, TIMESTAMP_FORMAT
+from constants import TRANSCRIPT_DIR, TIMESTAMP_FORMAT, METADATA_DIR
 
 
 class TranscriptBuffer:
@@ -14,6 +14,8 @@ class TranscriptBuffer:
         self.text_parts: List[str] = []
         self.counter = 1
         self.transcript_path: Optional[str] = None
+        self.metadata_path: Optional[str] = None
+        self.segments: List[Dict[str, str]] = []
 
     def _extract_timestamp(self, audio_path: str) -> str:
         """Return the timestamp portion from ``audio_path``."""
@@ -23,7 +25,7 @@ class TranscriptBuffer:
         return datetime.now().strftime(TIMESTAMP_FORMAT)
 
     def append(self, text: str, audio_path: str) -> bool:
-        """Append a transcription and copy the audio file.
+        """Append ``text`` for ``audio_path`` and update metadata.
 
         Returns ``True`` if the transcript was written successfully."""
         if not text:
@@ -33,20 +35,28 @@ class TranscriptBuffer:
             self.transcript_path = os.path.join(
                 TRANSCRIPT_DIR, f"{self.base_timestamp}.txt"
             )
-        if os.path.exists(audio_path):
-            dest = os.path.join(
-                TRANSCRIPT_DIR,
-                f"RECORDING_{self.base_timestamp}_{self.counter:03d}.wav",
+            self.metadata_path = os.path.join(
+                METADATA_DIR, f"{self.base_timestamp}.json"
             )
-            try:
-                shutil.copy2(audio_path, dest)
-            except OSError:
-                pass
+        timestamp = self._extract_timestamp(audio_path)
+        seg_name = f"TRANSCRIPT_{timestamp}.txt"
+        seg_path = os.path.join(TRANSCRIPT_DIR, seg_name)
+        os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
+        try:
+            with open(seg_path, "w", encoding="utf-8") as f:
+                f.write(text.strip() + "\n")
+        except OSError:
+            pass
+        self.segments.append({"audio": os.path.basename(audio_path), "transcript": seg_name})
         self.text_parts.append(text.strip())
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
             with open(self.transcript_path, "w", encoding="utf-8") as f:
                 f.write("\n\n".join(self.text_parts) + "\n")
+            if self.metadata_path:
+                os.makedirs(METADATA_DIR, exist_ok=True)
+                with open(self.metadata_path, "w", encoding="utf-8") as mf:
+                    json.dump({"segments": self.segments}, mf, indent=2)
         except OSError:
             return False
         finally:
