@@ -9,6 +9,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const fs = require('fs');
     const path = require('path');
     const RECORDING_DIR = path.join(__dirname, '..', 'saved_data', 'recorded_audio');
+    const METADATA_DIR = path.join(__dirname, '..', 'saved_data', 'metadata');
 
     const API_PORT = 8000;
 
@@ -37,6 +38,23 @@ window.addEventListener('DOMContentLoaded', () => {
             console.error('Failed to read recordings', err);
             return null;
         }
+    }
+
+    function getLatestSessionAudio() {
+        try {
+            const files = fs.readdirSync(METADATA_DIR)
+                .filter(f => f.toLowerCase().endsWith('.json'));
+            if (files.length === 0) return [];
+            files.sort().reverse();
+            const latestMeta = path.join(METADATA_DIR, files[0]);
+            const data = JSON.parse(fs.readFileSync(latestMeta, 'utf8'));
+            if (data && Array.isArray(data.segments)) {
+                return data.segments.map(s => s.audio);
+            }
+        } catch (err) {
+            console.error('Failed to read metadata', err);
+        }
+        return [];
     }
 
     copyBtn.addEventListener('click', () => {
@@ -103,23 +121,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
     retranscribeBtn.addEventListener('click', async () => {
         if (processing) return;
-        const latest = getLatestAudio();
-        if (!latest) {
+        const files = getLatestSessionAudio();
+        if (!files.length) {
             return;
         }
         try {
             processing = true;
             recordBtn.disabled = true;
             retranscribeBtn.disabled = true;
-            retranscribeBtn.textContent = 'Processing...';
-            const res = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(latest)}`);
-            const data = await res.json();
-            if (data && data.transcript !== undefined) {
-                transcriptBuffer.push(data.transcript);
-                transcriptEl.innerHTML = transcriptBuffer.map(t => `<p>${t}</p>`).join('');
+            retranscribeBtn.textContent = 'Transcribing...';
+            transcriptBuffer.length = 0;
+            transcriptEl.innerHTML = '';
+
+            for (const file of files) {
+                const p = document.createElement('p');
+                p.textContent = 'Transcribing...';
+                transcriptEl.appendChild(p);
+                try {
+                    const res = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(file)}`);
+                    const data = await res.json();
+                    const text = (data && data.transcript !== undefined) ? data.transcript : '';
+                    transcriptBuffer.push(text);
+                    p.textContent = text;
+                } catch (err) {
+                    console.error('Failed to retranscribe', err);
+                    p.textContent = '[error]';
+                }
             }
-        } catch (err) {
-            console.error('Failed to retranscribe', err);
         } finally {
             processing = false;
             recordBtn.disabled = false;
