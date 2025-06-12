@@ -6,7 +6,7 @@ from constants import (
     BUTTON_FG,
     BUTTON_HOVER,
     TEXT_COLOR,
-    TRANSCRIPT_DIR,
+    DISCUSSIONS_DIR,
     RECORDING_DIR,
 )
 from model import run_model
@@ -350,7 +350,9 @@ class ClearSayUI:
         if content is None:
             return
         # allow subsequent saves to overwrite the opened transcript
-        self.transcripts.current_path = os.path.join(TRANSCRIPT_DIR, name)
+        self.transcripts.current_path = os.path.join(
+            DISCUSSIONS_DIR, name, "transcript_full.txt"
+        )
         self.text_box.configure(state="normal")
         self.text_box.delete("1.0", "end")
         self.text_box.insert("1.0", content)
