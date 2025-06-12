@@ -26,6 +26,39 @@ class DiscussionStorage:
         self.segment_count: int = 0
         self.name: Optional[str] = None
 
+        # Start with no active discussion. ``add_segment`` will load the
+        # appropriate session when re-transcribing old audio.
+
+    def _load_from_audio(self, audio_path: str) -> bool:
+        """Initialize state from ``audio_path`` if it belongs to an existing session."""
+        abs_path = os.path.abspath(audio_path)
+        base = os.path.abspath(DISCUSSIONS_DIR) + os.sep
+        if not abs_path.startswith(base):
+            return False
+        parts = abs_path[len(base):].split(os.sep)
+        if len(parts) < 3:
+            return False
+        disc_id = parts[0]
+        seg_path = os.path.join(DISCUSSIONS_DIR, disc_id, "segments.json")
+        if not os.path.exists(seg_path):
+            return False
+        try:
+            with open(seg_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            return False
+
+        self.current_id = data.get("created_at", disc_id)
+        self.discussion_path = os.path.join(DISCUSSIONS_DIR, disc_id)
+        self.audio_dir = os.path.join(self.discussion_path, "audio")
+        self.transcripts_dir = os.path.join(self.discussion_path, "transcripts")
+        self.segments_json = seg_path
+        self.full_transcript = os.path.join(self.discussion_path, "transcript_full.txt")
+        self.segments = data.get("segments", [])
+        self.segment_count = len(self.segments)
+        self.name = data.get("name")
+        return True
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
@@ -76,7 +109,8 @@ class DiscussionStorage:
         if not text:
             return True
         if self.current_id is None:
-            self._start_new_discussion()
+            if not self._load_from_audio(audio_path):
+                self._start_new_discussion()
         assert (
             self.discussion_path
             and self.audio_dir
@@ -88,9 +122,12 @@ class DiscussionStorage:
         wav_name = f"{seg_id}.wav"
         txt_name = f"{seg_id}.txt"
         wav_dest = os.path.join(self.audio_dir, wav_name)
-        try:
-            shutil.move(audio_path, wav_dest)
-        except Exception:
+        if os.path.abspath(audio_path) != os.path.abspath(wav_dest):
+            try:
+                shutil.move(audio_path, wav_dest)
+            except Exception:
+                wav_dest = audio_path
+        else:
             wav_dest = audio_path
         txt_dest = os.path.join(self.transcripts_dir, txt_name)
         atomic_write(txt_dest, text.strip() + "\n")
