@@ -1,163 +1,157 @@
-import os
 import json
+import os
+import shutil
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional, Callable
 
 from utils.fileio import atomic_write
-from constants import TRANSCRIPT_DIR, METADATA_DIR, TIMESTAMP_FORMAT
+from constants import (
+    DISCUSSIONS_DIR,
+    DISCUSSION_ID_FORMAT,
+    TIMESTAMP_FORMAT,
+)
 
 
-class TranscriptStorage:
-    """Handle saving of transcription segments and full transcripts."""
+class DiscussionStorage:
+    """Manage recordings and transcripts grouped by discussion."""
 
     def __init__(self) -> None:
-        self.base_timestamp: Optional[str] = None
-        self.current_path: Optional[str] = None
-        self.metadata_path: Optional[str] = None
+        self.current_id: Optional[str] = None
+        self.discussion_path: Optional[str] = None
+        self.audio_dir: Optional[str] = None
+        self.segments_json: Optional[str] = None
+        self.full_transcript: Optional[str] = None
         self.segments: List[Dict[str, str]] = []
-        self.text_parts: List[str] = []
+        self.segment_count: int = 0
 
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
-    def _extract_timestamp(self, audio_path: str) -> str:
-        name = os.path.splitext(os.path.basename(audio_path))[0]
-        if name.startswith("RECORDING_"):
-            return name[len("RECORDING_") :]
-        return datetime.now().strftime(TIMESTAMP_FORMAT)
-
-    def _save_metadata(self) -> None:
-        if self.metadata_path is None:
+    def _write_segments(self) -> None:
+        if not self.segments_json:
             return
-        os.makedirs(METADATA_DIR, exist_ok=True)
-        try:
-            atomic_write(
-                self.metadata_path,
-                json.dumps({"segments": self.segments}, indent=2),
-            )
-        except OSError:
-            pass
+        data = {"created_at": self.current_id, "segments": self.segments}
+        atomic_write(self.segments_json, json.dumps(data, indent=2))
+
+    def _start_new_discussion(self) -> None:
+        timestamp = datetime.now().strftime(DISCUSSION_ID_FORMAT)
+        self.current_id = timestamp
+        self.discussion_path = os.path.join(DISCUSSIONS_DIR, timestamp)
+        self.audio_dir = os.path.join(self.discussion_path, "audio")
+        os.makedirs(self.audio_dir, exist_ok=True)
+        self.segments_json = os.path.join(self.discussion_path, "segments.json")
+        self.full_transcript = os.path.join(
+            self.discussion_path, "transcript_full.txt"
+        )
+        self.segments = []
+        self.segment_count = 0
+        atomic_write(self.segments_json, json.dumps({"created_at": timestamp, "segments": []}, indent=2))
+        atomic_write(self.full_transcript, "")
 
     # ------------------------------------------------------------------
     # public API
     # ------------------------------------------------------------------
     def new(self) -> None:
-        """Reset internal state so a new transcript is created on save."""
-        self.base_timestamp = None
-        self.current_path = None
-        self.metadata_path = None
+        """Reset the internal state."""
+        self.current_id = None
+        self.discussion_path = None
+        self.audio_dir = None
+        self.segments_json = None
+        self.full_transcript = None
         self.segments = []
-        self.text_parts = []
+        self.segment_count = 0
 
-    def load_latest(self) -> None:
-        """Load the most recent transcript metadata and segments from disk."""
-        files = [f for f in os.listdir(METADATA_DIR) if f.endswith(".json")]
-        if not files:
-            return
-        files.sort()
-        latest = files[-1]
-        self.metadata_path = os.path.join(METADATA_DIR, latest)
-        self.base_timestamp = os.path.splitext(latest)[0]
-        self.current_path = os.path.join(TRANSCRIPT_DIR, f"{self.base_timestamp}.txt")
-        try:
-            with open(self.metadata_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except OSError:
-            return
-        self.segments = data.get("segments", [])
-        self.text_parts = []
-        for seg in self.segments:
-            seg_file = os.path.join(TRANSCRIPT_DIR, seg.get("transcript", ""))
-            try:
-                with open(seg_file, "r", encoding="utf-8") as tf:
-                    self.text_parts.append(tf.read().strip())
-            except OSError:
-                self.text_parts.append("")
-
-    def append_segment(self, text: str, audio_path: str) -> bool:
-        """Persist ``text`` for ``audio_path`` and update the combined transcript."""
+    def add_segment(self, text: str, audio_path: str, duration: float = 0.0) -> bool:
+        """Persist ``text`` and ``audio_path`` inside the current discussion."""
         if not text:
             return True
-        if self.base_timestamp is None:
-            self.base_timestamp = self._extract_timestamp(audio_path)
-            self.current_path = os.path.join(
-                TRANSCRIPT_DIR, f"{self.base_timestamp}.txt"
-            )
-            self.metadata_path = os.path.join(
-                METADATA_DIR, f"{self.base_timestamp}.json"
-            )
-        timestamp = self._extract_timestamp(audio_path)
-        seg_name = f"TRANSCRIPT_{timestamp}.txt"
-        seg_path = os.path.join(TRANSCRIPT_DIR, seg_name)
-        os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
+        if self.current_id is None:
+            self._start_new_discussion()
+        assert self.discussion_path and self.audio_dir and self.full_transcript
+        self.segment_count += 1
+        seg_id = f"seg{self.segment_count:03d}"
+        wav_name = f"{seg_id}.wav"
+        txt_name = f"{seg_id}.txt"
+        wav_dest = os.path.join(self.audio_dir, wav_name)
         try:
-            atomic_write(seg_path, text.strip() + "\n")
-        except OSError:
-            pass
-        base_audio = os.path.basename(audio_path)
-        try:
-            idx = next(i for i, s in enumerate(self.segments) if s["audio"] == base_audio)
-        except StopIteration:
-            self.segments.append({"audio": base_audio, "transcript": seg_name})
-            self.text_parts.append(text.strip())
-        else:
-            self.segments[idx] = {"audio": base_audio, "transcript": seg_name}
-            self.text_parts[idx] = text.strip()
-        if self.current_path:
-            try:
-                atomic_write(self.current_path, "\n\n".join(self.text_parts) + "\n")
-            except OSError:
-                return False
-        self._save_metadata()
+            shutil.move(audio_path, wav_dest)
+        except Exception:
+            wav_dest = audio_path
+        txt_dest = os.path.join(self.discussion_path, txt_name)
+        atomic_write(txt_dest, text.strip() + "\n")
+        entry = {
+            "id": seg_id,
+            "wav": os.path.relpath(wav_dest, self.discussion_path),
+            "txt": txt_name,
+            "timestamp": datetime.now().strftime(TIMESTAMP_FORMAT),
+            "duration": duration,
+        }
+        self.segments.append(entry)
+        self._write_segments()
+        # append to transcript
+        existing = os.path.exists(self.full_transcript) and os.path.getsize(self.full_transcript) > 0
+        with open(self.full_transcript, "a", encoding="utf-8") as f:
+            if existing:
+                f.write("\n\n")
+            f.write(text.strip())
         return True
 
-    # compatibility wrappers
-    def append(self, text: str, audio_path: str) -> bool:
-        return self.append_segment(text, audio_path)
+    # compatibility wrapper
+    def append_segment(self, text: str, audio_path: str) -> bool:
+        return self.add_segment(text, audio_path)
 
-    def add_segment(self, text: str, audio_path: str) -> bool:
-        return self.append_segment(text, audio_path)
+    def append(self, text: str, audio_path: str) -> bool:
+        return self.add_segment(text, audio_path)
 
     def save_full(self, text: str, timestamp: Optional[str] = None) -> Optional[str]:
-        """Write ``text`` to the current transcript file."""
-        if not text:
-            return None
-        if self.current_path is None:
+        if not self.full_transcript:
             if timestamp is None:
-                timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
-            self.current_path = os.path.join(TRANSCRIPT_DIR, f"{timestamp}.txt")
-            self.metadata_path = os.path.join(METADATA_DIR, f"{timestamp}.json")
-            self.base_timestamp = timestamp
-        os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
-        try:
-            atomic_write(self.current_path, text + "\n")
-        except OSError:
-            return None
-        self.text_parts = [p.strip() for p in text.split("\n\n") if p.strip()]
-        self._save_metadata()
-        return self.current_path
+                return None
+            self._start_new_discussion()
+        assert self.full_transcript
+        atomic_write(self.full_transcript, text.strip() + "\n")
+        return self.full_transcript
 
     def save(self, text: str, timestamp: Optional[str] = None) -> Optional[str]:
         return self.save_full(text, timestamp)
 
     def list(self, filter_text: str = "") -> List[str]:
-        """Return available transcript file names."""
-        files = [
-            f
-            for f in os.listdir(TRANSCRIPT_DIR)
-            if f.endswith(".txt") and not f.startswith("TRANSCRIPT_")
-        ]
-        files.sort()
+        """Return available discussion folders."""
+        if not os.path.exists(DISCUSSIONS_DIR):
+            return []
+        dirs = [d for d in os.listdir(DISCUSSIONS_DIR) if os.path.isdir(os.path.join(DISCUSSIONS_DIR, d))]
+        dirs.sort()
         if filter_text:
-            files = [f for f in files if filter_text.lower() in f.lower()]
-        return files
+            dirs = [d for d in dirs if filter_text.lower() in d.lower()]
+        return dirs
 
     def load(self, name: str) -> Optional[str]:
-        """Load the contents of ``name`` if it exists."""
-        path = os.path.join(TRANSCRIPT_DIR, name)
+        path = os.path.join(DISCUSSIONS_DIR, name, "transcript_full.txt")
         if not os.path.exists(path):
             return None
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
 
+    def retranscribe_last_segment(self, transcribe_func: Callable[[str], str]) -> Optional[str]:
+        if not self.segments:
+            return None
+        last = self.segments[-1]
+        wav = os.path.join(self.discussion_path, last["wav"])
+        txt = os.path.join(self.discussion_path, last["txt"])
+        try:
+            new_text = transcribe_func(wav)
+        except Exception:
+            return None
+        atomic_write(txt, new_text.strip() + "\n")
+        # rebuild full transcript
+        texts = []
+        for seg in self.segments:
+            p = os.path.join(self.discussion_path, seg["txt"])
+            with open(p, "r", encoding="utf-8") as f:
+                texts.append(f.read().strip())
+        atomic_write(self.full_transcript, "\n\n".join(texts) + "\n")
+        return new_text
 
+
+# Backwards compatibility
+TranscriptStorage = DiscussionStorage

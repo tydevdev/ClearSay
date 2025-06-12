@@ -13,7 +13,7 @@ except Exception as exc:  # pragma: no cover - startup check
 
 from recorder import Recorder
 from model import run_model
-from constants import RECORDING_DIR, METADATA_DIR
+from constants import RECORDING_DIR, DISCUSSIONS_DIR
 from storage import TranscriptStorage
 
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +31,6 @@ app.add_middleware(
 
 recorder = Recorder()
 transcript_buffer = TranscriptStorage()
-if any(f.endswith(".json") for f in os.listdir(METADATA_DIR)):
-    transcript_buffer.load_latest()
 
 
 @app.post("/record")
