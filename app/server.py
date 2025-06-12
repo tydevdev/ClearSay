@@ -67,6 +67,8 @@ async def transcribe(file: str):
         path = os.path.abspath(os.path.join(DISCUSSIONS_DIR, file))
         disc_root = os.path.abspath(DISCUSSIONS_DIR)
         valid = path.startswith(disc_root + os.sep) and os.path.exists(path)
+        if valid and transcript_buffer.current_id is None:
+            transcript_buffer.resume_last_discussion()
     logger.info("Transcribe request for %s", path)
     if not valid:
         logger.warning("File not found or outside allowed dirs: %s", file)

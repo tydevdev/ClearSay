@@ -386,6 +386,8 @@ class ClearSayUI:
         if path is None:
             self._handle_transcription_error("No recent audio found")
             return
+        if self.transcripts.current_id is None:
+            self.transcripts.resume_last_discussion()
         self.start_button.configure(state="disabled")
         self.retranscribe_button.configure(state="disabled")
         self.status_label.configure(text="Transcribing...")
