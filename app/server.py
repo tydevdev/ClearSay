@@ -83,8 +83,19 @@ async def transcribe(file: str):
 
 @app.get("/current_discussion")
 async def current_discussion() -> dict[str, str | None]:
-    """Return the currently active discussion ID, if any."""
-    return {"id": transcript_buffer.current_id}
+    """Return the currently active discussion ID and name, if any."""
+    return {"id": transcript_buffer.current_id, "name": transcript_buffer.name}
+
+
+@app.post("/discussion_name")
+async def set_discussion_name(request: Request):
+    """Set a user friendly name for the current discussion."""
+    data = await request.json()
+    name = data.get("name")
+    if transcript_buffer.current_id is None:
+        raise HTTPException(status_code=400, detail="No active discussion")
+    transcript_buffer.set_name(name)
+    return {"status": "ok"}
 
 
 def main() -> None:

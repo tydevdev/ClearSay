@@ -24,6 +24,7 @@ class DiscussionStorage:
         self.full_transcript: Optional[str] = None
         self.segments: List[Dict[str, str]] = []
         self.segment_count: int = 0
+        self.name: Optional[str] = None
 
     # ------------------------------------------------------------------
     # internal helpers
@@ -31,7 +32,7 @@ class DiscussionStorage:
     def _write_segments(self) -> None:
         if not self.segments_json:
             return
-        data = {"created_at": self.current_id, "segments": self.segments}
+        data = {"created_at": self.current_id, "name": self.name, "segments": self.segments}
         atomic_write(self.segments_json, json.dumps(data, indent=2))
 
     def _start_new_discussion(self) -> None:
@@ -48,7 +49,11 @@ class DiscussionStorage:
         )
         self.segments = []
         self.segment_count = 0
-        atomic_write(self.segments_json, json.dumps({"created_at": timestamp, "segments": []}, indent=2))
+        self.name = None
+        atomic_write(
+            self.segments_json,
+            json.dumps({"created_at": timestamp, "name": None, "segments": []}, indent=2),
+        )
         atomic_write(self.full_transcript, "")
 
     # ------------------------------------------------------------------
@@ -64,6 +69,7 @@ class DiscussionStorage:
         self.full_transcript = None
         self.segments = []
         self.segment_count = 0
+        self.name = None
 
     def add_segment(self, text: str, audio_path: str, duration: float = 0.0) -> bool:
         """Persist ``text`` and ``audio_path`` inside the current discussion."""
@@ -140,6 +146,11 @@ class DiscussionStorage:
             return None
         with open(path, "r", encoding="utf-8") as f:
             return f.read()
+
+    def set_name(self, name: Optional[str]) -> None:
+        """Set a user-friendly name for the current discussion."""
+        self.name = name.strip() if name else None
+        self._write_segments()
 
     def retranscribe_last_segment(self, transcribe_func: Callable[[str], str]) -> Optional[str]:
         if not self.segments:
