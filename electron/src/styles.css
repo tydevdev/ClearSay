@@ -51,6 +51,14 @@ body {
     animation: gradient-move 6s ease infinite;
 }
 
+.discussion-label {
+    margin: 0;
+    text-align: center;
+    font-size: 0.875rem;
+    font-style: italic;
+    color: var(--color-hint);
+}
+
 @keyframes gradient-move {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
