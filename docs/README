@@ -1,5 +1,6 @@
 This folder holds additional documentation for ClearSay.
 
-Transcripts now resume automatically when the server starts. The most
-recent discussion's ``segments.json`` file is loaded so new audio
-segments continue from where you left off.
+When ClearSay starts there is no active discussion. Press
+**Re-Transcribe** with no discussion selected to transcribe the audio
+from your most recent session. The prior discussion name is preserved
+so new segments continue in the same folder.
