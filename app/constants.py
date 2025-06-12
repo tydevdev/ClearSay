@@ -14,8 +14,9 @@ BUTTON_HOVER = "#b0d4ff"
 SAMPLE_RATE = 44100
 
 # Shared timestamp format for recordings and transcripts
-# Use seconds for easier pairing of audio and text
-TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S"
+# Include microseconds to avoid filename collisions when recordings
+# happen in quick succession.
+TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S-%f"
 
 # Directories for recorded audio, transcripts and metadata
 RECORDING_DIR = os.path.join(DATA_DIR, "recorded_audio")

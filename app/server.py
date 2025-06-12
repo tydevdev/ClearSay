@@ -62,6 +62,10 @@ async def transcribe(file: str):
     """Transcribe ``file`` from :data:`RECORDING_DIR`."""
     path = os.path.abspath(os.path.join(RECORDING_DIR, file))
     logger.info("Transcribe request for %s", path)
+    recording_root = os.path.abspath(RECORDING_DIR)
+    if not path.startswith(recording_root + os.sep):
+        logger.warning("Invalid file path outside recording dir: %s", path)
+        raise HTTPException(status_code=400, detail="Invalid file")
     if not os.path.exists(path):
         logger.warning("File not found: %s", path)
         raise HTTPException(status_code=404, detail="File not found")
