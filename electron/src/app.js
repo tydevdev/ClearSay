@@ -128,6 +128,8 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
             processing = true;
             recordBtn.disabled = true;
+            recordBtnText.textContent = 'Start Recording';
+            recordBtnIcon.innerHTML = micIcon;
             retranscribeBtn.disabled = true;
             retranscribeBtn.textContent = 'Transcribing...';
             transcriptBuffer.length = 0;
