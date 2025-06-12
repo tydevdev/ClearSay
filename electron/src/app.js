@@ -218,7 +218,7 @@ window.addEventListener('DOMContentLoaded', () => {
             transcriptBuffer.length = 0;
             transcriptEl.innerHTML = '';
 
-            for (const file of files) {
+            for (const [idx, file] of files.entries()) {
                 const p = document.createElement('p');
                 p.textContent = 'Transcribing...';
                 transcriptEl.appendChild(p);
@@ -227,6 +227,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     const data = await res.json();
                     const text = (data && data.transcript !== undefined) ? data.transcript : '';
                     transcriptBuffer.push(text);
+                    if (idx === 0) {
+                        await updateDiscussionLabel();
+                    }
                     p.textContent = text;
                 } catch (err) {
                     console.error('Failed to retranscribe', err);
