@@ -227,7 +227,7 @@ class ClearSayUI:
     def _update_transcription_ui(self, transcription: str) -> None:
         self.text_box.configure(state="normal")
         if self.text_box.get("1.0", "end").strip():
-            self.text_box.insert("end", "\n" + transcription)
+            self.text_box.insert("end", "\n\n" + transcription)
         else:
             self.text_box.insert("end", transcription)
         self.text_box.configure(state="disabled")

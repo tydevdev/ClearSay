@@ -19,7 +19,7 @@ class TranscriptManager:
             if timestamp is None:
                 timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
             self.current_path = os.path.join(
-                TRANSCRIPT_DIR, f"TRANSCRIPT_{timestamp}.txt"
+                TRANSCRIPT_DIR, f"{timestamp}.txt"
             )
         os.makedirs(TRANSCRIPT_DIR, exist_ok=True)
         try:
