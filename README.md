@@ -2,7 +2,7 @@
 
 ClearSay is a simple desktop application to help children like William practice speech. Click **Start Recording** and the app records from your microphone before transcribing it with a fine-tuned Whisper model.
 
-Transcripts accumulate in a single buffer so you can pause and resume dictation. Data now lives under `saved_data/` with `recorded_audio/` for the audio files and `audio_transcripts/` for the text. Each recording is saved as `RECORDING_YYYY-MM-DD_HH-MM-SS.wav` and has a matching transcript file `TRANSCRIPT_YYYY-MM-DD_HH-MM-SS.txt`. A metadata file tracks the order of these segments when building the combined transcript.
+Transcripts accumulate in a single buffer so you can pause and resume dictation. Data now lives under `saved_data/` with `recorded_audio/` for the audio files and `audio_transcripts/` for the text. Each recording is saved as `RECORDING_YYYY-MM-DD_HH-MM-SS-ffffff.wav` and has a matching transcript file `TRANSCRIPT_YYYY-MM-DD_HH-MM-SS-ffffff.txt`. A metadata file tracks the order of these segments when building the combined transcript. The microsecond component prevents collisions when recordings are created rapidly.
 
 ## Requirements
 
