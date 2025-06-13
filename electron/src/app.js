@@ -44,6 +44,7 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`http://localhost:${API_PORT}/current_discussion`);
             const data = await res.json();
+            if (suppressLabelUpdate) return;
             if (data.id) {
                 const label = data.name ? data.name : data.id;
                 discussionEl.textContent = `Discussion: ${label}`;
@@ -61,6 +62,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 saveNameBtn.style.display = 'none';
             }
         } catch (_) {
+            if (suppressLabelUpdate) return;
             discussionEl.textContent = 'No active discussion';
             renameBtn.disabled = true;
             renameBtn.style.display = 'none';
