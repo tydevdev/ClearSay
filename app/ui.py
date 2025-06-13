@@ -379,34 +379,45 @@ class ClearSayUI:
         self.discussion_label.configure(text=f"Viewing: {name}")
 
     def retranscribe_latest_audio(self) -> None:
-        """Transcribe the most recent recording again."""
+        """Re-run transcription for the most recent discussion segment."""
         if self.start_button.cget("state") == "disabled":
             return
-        path = latest_audio_path()
-        if path is None:
-            self._handle_transcription_error("No recent audio found")
-            return
         if self.transcripts.current_id is None:
-            self.transcripts.resume_last_discussion()
+            if not self.transcripts.resume_last_discussion():
+                self._handle_transcription_error("No discussion found")
+                return
+        if not self.transcripts.segments:
+            self._handle_transcription_error("No segments to retranscribe")
+            return
         self.start_button.configure(state="disabled")
         self.retranscribe_button.configure(state="disabled")
         self.status_label.configure(text="Transcribing...")
-        name = os.path.splitext(os.path.basename(path))[0]
-        if name.startswith("RECORDING_"):
-            self.current_timestamp = name[len("RECORDING_") :]
-        else:
-            self.current_timestamp = None
-        threading.Thread(
-            target=self._retranscribe_thread, args=(path,), daemon=True
-        ).start()
+        threading.Thread(target=self._retranscribe_thread, daemon=True).start()
 
-    def _retranscribe_thread(self, file_path: str) -> None:
-        try:
-            transcription = run_model(file_path)
-        except Exception:
+    def _retranscribe_thread(self) -> None:
+        new_text = self.transcripts.retranscribe_last_segment(run_model)
+        if new_text is None:
             self.app.after(0, lambda: self._handle_transcription_error("Transcription failed"))
             return
-        self.app.after(0, lambda: self._update_transcription_ui(transcription, file_path))
+        self.app.after(0, lambda: self._update_retranscription_ui())
+
+    def _update_retranscription_ui(self) -> None:
+        content = self.transcripts.load(self.transcripts.current_id)
+        if content is None:
+            content = ""
+        self.text_box.configure(state="normal")
+        self.text_box.delete("1.0", "end")
+        self.text_box.insert("1.0", content)
+        self.text_box.configure(state="disabled")
+        self.status_label.configure(text="")
+        self.update_discussion_label()
+        self.refresh_transcripts_list(self.search_var.get())
+        self.start_button.configure(
+            text="Start Recording",
+            state="normal",
+            font=ctk.CTkFont(size=16, weight="bold"),
+        )
+        self.retranscribe_button.configure(state="normal")
 
     def _handle_transcription_error(self, message: str) -> None:
         self.status_label.configure(text=message, fg_color="#fff3cd")
