@@ -71,6 +71,20 @@ class DiscussionStorage:
         data = {"created_at": self.current_id, "name": self.name, "segments": self.segments}
         atomic_write(self.segments_json, json.dumps(data, indent=2))
 
+    def _rebuild_full_transcript(self) -> None:
+        """Rewrite ``transcript_full.txt`` from individual segment files."""
+        if not self.full_transcript:
+            return
+        texts = []
+        for seg in self.segments:
+            p = os.path.join(self.discussion_path, seg["txt"])
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    texts.append(f.read().strip())
+            except Exception:
+                texts.append("")
+        atomic_write(self.full_transcript, "\n\n".join(texts) + "\n")
+
     def _start_new_discussion(self) -> None:
         timestamp = datetime.now().strftime(DISCUSSION_ID_FORMAT)
         self.current_id = timestamp
@@ -119,6 +133,20 @@ class DiscussionStorage:
             and self.transcripts_dir
             and self.full_transcript
         )
+        audio_abs = os.path.abspath(audio_path)
+        audio_dir_abs = os.path.abspath(self.audio_dir)
+        if audio_abs.startswith(audio_dir_abs + os.sep):
+            seg_id = os.path.splitext(os.path.basename(audio_abs))[0]
+            for seg in self.segments:
+                if seg["id"] == seg_id:
+                    txt_dest = os.path.join(self.transcripts_dir, f"{seg_id}.txt")
+                    atomic_write(txt_dest, text.strip() + "\n")
+                    if duration:
+                        seg["duration"] = duration
+                    self._write_segments()
+                    self._rebuild_full_transcript()
+                    return True
+
         self.segment_count += 1
         seg_id = f"seg{self.segment_count:03d}"
         wav_name = f"{seg_id}.wav"
@@ -139,7 +167,6 @@ class DiscussionStorage:
         }
         self.segments.append(entry)
         self._write_segments()
-        # append to transcript
         existing = os.path.exists(self.full_transcript) and os.path.getsize(self.full_transcript) > 0
         with open(self.full_transcript, "a", encoding="utf-8") as f:
             if existing:
@@ -199,13 +226,7 @@ class DiscussionStorage:
         except Exception:
             return None
         atomic_write(txt, new_text.strip() + "\n")
-        # rebuild full transcript
-        texts = []
-        for seg in self.segments:
-            p = os.path.join(self.discussion_path, seg["txt"])
-            with open(p, "r", encoding="utf-8") as f:
-                texts.append(f.read().strip())
-        atomic_write(self.full_transcript, "\n\n".join(texts) + "\n")
+        self._rebuild_full_transcript()
         return new_text
 
 
