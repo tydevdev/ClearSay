@@ -37,6 +37,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let recording = false;
     let processing = false;
     let suppressLabelUpdate = false;
+    let lastDiscussionLabel = '';
     const transcriptBuffer = [];
 
     async function updateDiscussionLabel() {
@@ -47,6 +48,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (suppressLabelUpdate) return;
             if (data.id) {
                 const label = data.name ? data.name : data.id;
+                lastDiscussionLabel = label;
                 discussionEl.textContent = `Discussion: ${label}`;
                 renameBtn.disabled = false;
                 renameBtn.style.display = 'inline-flex';
@@ -54,18 +56,20 @@ window.addEventListener('DOMContentLoaded', () => {
                 nameInput.style.display = 'none';
                 saveNameBtn.style.display = 'none';
             } else {
-                discussionEl.textContent = 'No active discussion';
-                renameBtn.disabled = true;
-                renameBtn.style.display = 'none';
+                const label = lastDiscussionLabel;
+                discussionEl.textContent = label ? `Discussion: ${label}` : 'No active discussion';
+                renameBtn.disabled = !label;
+                renameBtn.style.display = label ? 'inline-flex' : 'none';
                 discussionEl.style.display = '';
                 nameInput.style.display = 'none';
                 saveNameBtn.style.display = 'none';
             }
         } catch (_) {
             if (suppressLabelUpdate) return;
-            discussionEl.textContent = 'No active discussion';
-            renameBtn.disabled = true;
-            renameBtn.style.display = 'none';
+            const label = lastDiscussionLabel;
+            discussionEl.textContent = label ? `Discussion: ${label}` : 'No active discussion';
+            renameBtn.disabled = !label;
+            renameBtn.style.display = label ? 'inline-flex' : 'none';
             discussionEl.style.display = '';
             nameInput.style.display = 'none';
             saveNameBtn.style.display = 'none';
@@ -156,6 +160,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const meta = path.join(DISCUSSIONS_DIR, latest, 'segments.json');
             const info = JSON.parse(fs.readFileSync(meta, 'utf8'));
             const label = info.name ? info.name : (info.created_at || latest);
+            lastDiscussionLabel = label;
             discussionEl.textContent = `Discussion: ${label}`;
             renameBtn.disabled = false;
             renameBtn.style.display = 'inline-flex';
