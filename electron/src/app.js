@@ -44,6 +44,7 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`http://localhost:${API_PORT}/current_discussion`);
             const data = await res.json();
+            if (suppressLabelUpdate) return;
             if (data.id) {
                 const label = data.name ? data.name : data.id;
                 discussionEl.textContent = `Discussion: ${label}`;
@@ -52,7 +53,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 discussionEl.style.display = '';
                 nameInput.style.display = 'none';
                 saveNameBtn.style.display = 'none';
-            } else {
+            } else if (!labelLatestDiscussion()) {
                 discussionEl.textContent = 'No active discussion';
                 renameBtn.disabled = true;
                 renameBtn.style.display = 'none';
@@ -61,12 +62,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 saveNameBtn.style.display = 'none';
             }
         } catch (_) {
-            discussionEl.textContent = 'No active discussion';
-            renameBtn.disabled = true;
-            renameBtn.style.display = 'none';
-            discussionEl.style.display = '';
-            nameInput.style.display = 'none';
-            saveNameBtn.style.display = 'none';
+            if (suppressLabelUpdate) return;
+            if (!labelLatestDiscussion()) {
+                discussionEl.textContent = 'No active discussion';
+                renameBtn.disabled = true;
+                renameBtn.style.display = 'none';
+                discussionEl.style.display = '';
+                nameInput.style.display = 'none';
+                saveNameBtn.style.display = 'none';
+            }
         }
     }
 
@@ -148,7 +152,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     try { return fs.statSync(path.join(DISCUSSIONS_DIR, d)).isDirectory(); }
                     catch { return false; }
                 });
-            if (!dirs.length) return;
+            if (!dirs.length) return false;
             dirs.sort();
             const latest = dirs[dirs.length - 1];
             const meta = path.join(DISCUSSIONS_DIR, latest, 'segments.json');
@@ -157,8 +161,13 @@ window.addEventListener('DOMContentLoaded', () => {
             discussionEl.textContent = `Discussion: ${label}`;
             renameBtn.disabled = false;
             renameBtn.style.display = 'inline-flex';
+            discussionEl.style.display = '';
+            nameInput.style.display = 'none';
+            saveNameBtn.style.display = 'none';
+            return true;
         } catch (err) {
             console.error('Failed to set latest discussion label', err);
+            return false;
         }
     }
 
@@ -243,7 +252,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
             suppressLabelUpdate = true;
             labelLatestDiscussion();
-            await new Promise(r => setTimeout(r, 50));
+            // Give the browser a moment to paint the discussion name before
+            // kicking off the heavy transcription requests
+            await new Promise(r => setTimeout(r, 200));
 
             for (const [idx, file] of files.entries()) {
                 const p = document.createElement('p');
