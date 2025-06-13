@@ -4,10 +4,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const retranscribeBtn = document.getElementById('retranscribe-btn');
     const recordBtnText = recordBtn.querySelector('span');
     const recordBtnIcon = recordBtn.querySelector('svg');
+    const nameRecordBtnIcon = nameRecordBtn.querySelector('svg');
     const transcriptEl = document.getElementById('transcript');
     const discussionEl = document.getElementById('discussion-label');
     const renameBtn = document.getElementById('rename-btn');
     const saveNameBtn = document.getElementById('save-name-btn');
+    const nameRecordBtn = document.getElementById('name-record-btn');
     const nameInput = document.getElementById('discussion-name-input');
 
     const fs = require('fs');
@@ -35,6 +37,7 @@ window.addEventListener('DOMContentLoaded', () => {
     `;
 
     let recording = false;
+    let nameRecording = false;
     let processing = false;
     let suppressLabelUpdate = false;
     let lastDiscussionLabel = '';
@@ -55,6 +58,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 discussionEl.style.display = '';
                 nameInput.style.display = 'none';
                 saveNameBtn.style.display = 'none';
+                nameRecordBtn.style.display = 'none';
             } else {
                 const label = lastDiscussionLabel;
                 discussionEl.textContent = label ? `Discussion: ${label}` : 'No active discussion';
@@ -63,6 +67,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 discussionEl.style.display = '';
                 nameInput.style.display = 'none';
                 saveNameBtn.style.display = 'none';
+                nameRecordBtn.style.display = 'none';
             }
         } catch (_) {
             if (suppressLabelUpdate) return;
@@ -73,6 +78,7 @@ window.addEventListener('DOMContentLoaded', () => {
             discussionEl.style.display = '';
             nameInput.style.display = 'none';
             saveNameBtn.style.display = 'none';
+            nameRecordBtn.style.display = 'none';
         }
     }
 
@@ -82,6 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
         discussionEl.style.display = '';
         nameInput.style.display = 'none';
         saveNameBtn.style.display = 'none';
+        nameRecordBtn.style.display = 'none';
         renameBtn.style.display = 'inline-flex';
     }
 
@@ -107,6 +114,8 @@ window.addEventListener('DOMContentLoaded', () => {
         discussionEl.style.display = 'none';
         nameInput.style.display = 'inline';
         saveNameBtn.style.display = 'inline-flex';
+        nameRecordBtn.style.display = 'inline-flex';
+        nameRecordBtnIcon.innerHTML = micIcon;
         renameBtn.style.display = 'none';
         saveNameBtn.disabled = true;
     });
@@ -124,6 +133,49 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     saveNameBtn.addEventListener('click', saveDiscussionName);
+
+    nameRecordBtn.addEventListener('click', async () => {
+        if (processing || recording) return;
+
+        if (!nameRecording) {
+            try {
+                await fetch(`http://localhost:${API_PORT}/record`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'start' })
+                });
+                nameRecording = true;
+                nameRecordBtnIcon.innerHTML = stopIcon;
+                recordBtn.disabled = true;
+            } catch (err) {
+                console.error('Failed to start name recording', err);
+            }
+        } else {
+            try {
+                const res = await fetch(`http://localhost:${API_PORT}/record`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'stop' })
+                });
+                const data = await res.json();
+                if (data && data.file) {
+                    const tRes = await fetch(`http://localhost:${API_PORT}/transcribe?file=${encodeURIComponent(data.file)}&save=false`);
+                    const tData = await tRes.json();
+                    if (tData && tData.transcript !== undefined) {
+                        nameInput.value = tData.transcript.trim();
+                        const current = discussionEl.textContent.replace('Discussion: ', '').trim();
+                        saveNameBtn.disabled = nameInput.value.trim() === current;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to stop name recording', err);
+            } finally {
+                nameRecording = false;
+                nameRecordBtnIcon.innerHTML = micIcon;
+                recordBtn.disabled = false;
+            }
+        }
+    });
 
     function getLatestAudio() {
         try {

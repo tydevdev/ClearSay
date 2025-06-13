@@ -58,7 +58,7 @@ async def health() -> dict[str, str]:
 
 
 @app.get("/transcribe")
-async def transcribe(file: str):
+async def transcribe(file: str, save: bool = True):
     """Transcribe ``file`` from ``recorded_audio`` or ``discussions``."""
     path = os.path.abspath(os.path.join(RECORDING_DIR, file))
     recording_root = os.path.abspath(RECORDING_DIR)
@@ -79,7 +79,8 @@ async def transcribe(file: str):
         logger.exception("run_model failed for %s", path)
         raise HTTPException(status_code=500, detail="Transcription failed") from exc
 
-    transcript_buffer.append(text, path)
+    if save:
+        transcript_buffer.append(text, path)
     return {"transcript": text}
 
 
