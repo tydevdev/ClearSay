@@ -50,7 +50,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 const label = data.name ? data.name : data.id;
                 lastDiscussionLabel = label;
                 discussionEl.textContent = `Discussion: ${label}`;
-                renameBtn.disabled = false;
+                renameBtn.disabled = processing ? true : false;
                 renameBtn.style.display = 'inline-flex';
                 discussionEl.style.display = '';
                 nameInput.style.display = 'none';
@@ -58,7 +58,7 @@ window.addEventListener('DOMContentLoaded', () => {
             } else {
                 const label = lastDiscussionLabel;
                 discussionEl.textContent = label ? `Discussion: ${label}` : 'No active discussion';
-                renameBtn.disabled = !label;
+                renameBtn.disabled = processing ? true : !label;
                 renameBtn.style.display = label ? 'inline-flex' : 'none';
                 discussionEl.style.display = '';
                 nameInput.style.display = 'none';
@@ -68,7 +68,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (suppressLabelUpdate) return;
             const label = lastDiscussionLabel;
             discussionEl.textContent = label ? `Discussion: ${label}` : 'No active discussion';
-            renameBtn.disabled = !label;
+            renameBtn.disabled = processing ? true : !label;
             renameBtn.style.display = label ? 'inline-flex' : 'none';
             discussionEl.style.display = '';
             nameInput.style.display = 'none';
@@ -78,7 +78,30 @@ window.addEventListener('DOMContentLoaded', () => {
 
     updateDiscussionLabel();
 
+    function closeRenameField() {
+        discussionEl.style.display = '';
+        nameInput.style.display = 'none';
+        saveNameBtn.style.display = 'none';
+        renameBtn.style.display = 'inline-flex';
+    }
+
+    async function saveDiscussionName() {
+        const name = nameInput.value.trim();
+        try {
+            await fetch(`http://localhost:${API_PORT}/discussion_name`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            });
+            await updateDiscussionLabel();
+        } catch (err) {
+            console.error('Failed to rename discussion', err);
+        }
+        closeRenameField();
+    }
+
     renameBtn.addEventListener('click', () => {
+        if (processing) return;
         const current = discussionEl.textContent.replace('Discussion: ', '').trim();
         nameInput.value = current;
         discussionEl.style.display = 'none';
@@ -93,23 +116,14 @@ window.addEventListener('DOMContentLoaded', () => {
         saveNameBtn.disabled = nameInput.value.trim() === current;
     });
 
-    saveNameBtn.addEventListener('click', async () => {
-        const name = nameInput.value.trim();
-        try {
-            await fetch(`http://localhost:${API_PORT}/discussion_name`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name })
-            });
-            await updateDiscussionLabel();
-        } catch (err) {
-            console.error('Failed to rename discussion', err);
+    nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !saveNameBtn.disabled) {
+            e.preventDefault();
+            saveDiscussionName();
         }
-        discussionEl.style.display = '';
-        nameInput.style.display = 'none';
-        saveNameBtn.style.display = 'none';
-        renameBtn.style.display = 'inline-flex';
     });
+
+    saveNameBtn.addEventListener('click', saveDiscussionName);
 
     function getLatestAudio() {
         try {
@@ -207,6 +221,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 processing = true;
                 recording = false;
+                renameBtn.disabled = true;
+                closeRenameField();
                 recordBtnText.textContent = 'Processing...';
                 recordBtnIcon.innerHTML = '';
                 recordBtn.disabled = true;
@@ -228,6 +244,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 recordBtn.disabled = false;
                 recordBtnText.textContent = 'Start Recording';
                 recordBtnIcon.innerHTML = micIcon;
+                renameBtn.disabled = false;
             }
         }
     });
@@ -240,6 +257,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         try {
             processing = true;
+            renameBtn.disabled = true;
+            closeRenameField();
             recordBtn.disabled = true;
             recordBtnText.textContent = 'Start Recording';
             recordBtnIcon.innerHTML = micIcon;
@@ -279,6 +298,7 @@ window.addEventListener('DOMContentLoaded', () => {
             retranscribeBtn.disabled = false;
             retranscribeBtn.textContent = 'Re-Transcribe';
             suppressLabelUpdate = false;
+            renameBtn.disabled = false;
             await updateDiscussionLabel();
         }
     });
