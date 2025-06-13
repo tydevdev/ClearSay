@@ -245,7 +245,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
             suppressLabelUpdate = true;
             labelLatestDiscussion();
-            await new Promise(r => setTimeout(r, 50));
+            // Give the browser a moment to paint the discussion name before
+            // kicking off the heavy transcription requests
+            await new Promise(r => setTimeout(r, 200));
 
             for (const [idx, file] of files.entries()) {
                 const p = document.createElement('p');
